@@ -25,3 +25,10 @@ Private Sub UserForm_Initialize()
   textBox.Text = "Yo bruva it's ya boy Jamo and I got something really cool to tell ya " & _
                  "It's so cool that you're gunna shizzle ma nizzle isn't it?"
 End Sub
+
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+  Call textBox.Terminate
+  
+  'Have to terminate VBA here.
+  End
+End Sub

@@ -21,7 +21,11 @@ Public Function Create(fr As MSForms.Frame) As uiTextBoxEx
   Set Create = New uiTextBoxEx
   Call Create.protInit(fr)
 End Function
-
+Public Sub Terminate()
+  Set pWndWordPane.parent = pWndWord
+  pAppWord.Quit False
+  DoEvents
+End Sub
 Public Property Get Text() As String
   Text = pAppWordDoc.Content.Text
 End Property
