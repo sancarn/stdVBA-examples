@@ -9,6 +9,11 @@ This is a text box control which uses a Microsoft Word instance as a userform co
 ## Requirements
 
 * [stdVBA](http://github.com/sancarn/stdVBA)
+    * stdICallable
+    * stdWindow
+    * stdProcess
+    * stdLambda
+* Currently only works on Windows OS
 
 ## Usage
 
