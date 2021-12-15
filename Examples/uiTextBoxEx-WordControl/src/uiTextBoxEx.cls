@@ -17,6 +17,11 @@ Private pWndWord As stdWindow
 Private pWndWordPane As stdWindow
 Private pProcWord As stdProcess
 
+'Variables to store display settings
+Private pSettingsReadOnly As Boolean
+Private pSettingsAnnotations As Boolean
+Private pSettingsRuler As Boolean
+
 Public Function Create(fr As MSForms.Frame) As uiTextBoxEx
   Set Create = New uiTextBoxEx
   Call Create.protInit(fr)
@@ -31,6 +36,40 @@ Public Property Get Text() As String
 End Property
 Public Property Let Text(RHS As String)
   pAppWordDoc.Content.Text = RHS
+   
+  If pSettingsReadOnly = True Then
+    'Applies Read Only protection (Type = wdAllowOnlyReading = 3)
+    'To Unprotect:   pAppWordDoc.Unprotect
+    pAppWordDoc.Protect Type:=3
+  End If
+End Property
+
+Public Property Get ReadOnly() As Boolean
+  ReadOnly = pSettingsReadOnly
+End Property
+
+Public Property Let ReadOnly(ReadOnlyState As Boolean)
+  'Read-Only protection is not set until after the text
+  'property has been set
+  pSettingsReadOnly = ReadOnlyState
+End Property
+
+Public Property Get DisplayRuler() As Boolean
+  DisplayRuler = pSettingsRuler
+End Property
+
+Public Property Let DisplayRuler(DisplayState As Boolean)
+  pSettingsRuler = DisplayState
+  pAppWord.ActiveWindow.ActivePane.DisplayRulers = pSettingsRuler
+End Property
+
+Public Property Get ShowAnnotations() As Boolean
+  ShowAnnotations = pSettingsAnnotations
+End Property
+
+Public Property Let ShowAnnotations(ShowAnnotationsState As Boolean)
+  pSettingsAnnotations = ShowAnnotationsState
+  pAppWord.ActiveWindow.ActivePane.View.ShowAll = pSettingsAnnotations
 End Property
 
 Friend Sub protInit(fr As MSForms.Frame)
@@ -39,17 +78,21 @@ Friend Sub protInit(fr As MSForms.Frame)
   
   'Set bindings to word
   Set pAppWord = CreateObject("Word.Application")
-  pAppWord.Visible = True
-  Set pAppWordDoc = pAppWord.documents.Add()
+  pAppWord.Visible = False
+  Set pAppWordDoc = pAppWord.Documents.Add()
   
   With pAppWord.ActiveWindow
     'Customise window properties
     .View.Type = 6 'webLayout
+        
+    'If the ActiveWindow is in a Maximised state, then the
+    'code returns an error for each of the following two lines.
+    .WindowState = 0
     
     'Set width and height to that of the frame
     .Width = pWndUserformFrame.Width - 30
     .Height = pWndUserformFrame.Height
-  
+    
     'Bind class to ActiveWindow object
     Set pWndWord = stdWindow.CreateFromHwnd(.hwnd)
   End With
@@ -68,9 +111,7 @@ Friend Sub protInit(fr As MSForms.Frame)
     .Y = 0
     .Width = pWndUserformFrame.Width
     .Height = pWndUserformFrame.Height
-    
-    
-    Debug.Print .X & "," & .Y & "," & .Width & "," & .Height
+  
   End With
   
   'Hide word window
@@ -78,7 +119,7 @@ Friend Sub protInit(fr As MSForms.Frame)
   
   'Bind to process
   Set pProcWord = stdProcess.CreateFromProcessId(pWndWord.ProcessID)
-  
+    
   'Focus window
   pAppWord.ActiveWindow.Activate
 End Sub
