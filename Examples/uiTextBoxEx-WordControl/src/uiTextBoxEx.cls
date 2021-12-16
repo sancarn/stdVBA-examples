@@ -26,6 +26,9 @@ Public Sub Terminate()
   pAppWord.Quit False
   DoEvents
 End Sub
+
+'Obtain the text provided in the word control.
+'@returns {String} The text in the word control, note this text is unformatted
 Public Property Get Text() As String
   Text = pAppWordDoc.Content.Text
 End Property
@@ -33,6 +36,19 @@ Public Property Let Text(RHS As String)
   pAppWordDoc.Content.Text = RHS
 End Property
 
+'Get/Set the OpenXML data of the word document. This allows users to save and load formatted text to and from the control.
+'@returns {String} OpenXML document containing word data
+Public Property Get OpenXML() As String
+  OpenXML = pAppWordDoc.Content.XML
+End Property
+Public Property Let OpenXML(RHS As String)
+  With pAppWordDoc.Content
+    .Delete
+    .InsertXML(RHS)
+  End With
+End Property
+
+'Initialise word document
 Friend Sub protInit(fr As MSForms.Frame)
   'Set word control
   Set pWndUserformFrame = stdWindow.CreateFromIUnknown(fr)
