@@ -55,13 +55,17 @@ Friend Sub protInit(fr As MSForms.Frame)
   
   'Set bindings to word
   Set pAppWord = CreateObject("Word.Application")
-  pAppWord.Visible = True
+  pAppWord.Visible = False
   Set pAppWordDoc = pAppWord.documents.Add()
   
   With pAppWord.ActiveWindow
     'Customise window properties
     .View.Type = 6 'webLayout
     
+    'If the ActiveWindow is in a Maximised state, then the
+    'code returns an error for each of the following two lines.
+    .WindowState = 0
+
     'Set width and height to that of the frame
     .Width = pWndUserformFrame.Width - 30
     .Height = pWndUserformFrame.Height
@@ -102,5 +106,7 @@ End Sub
 'Upon termination of the class we need to properly cleanup the word application, as it's still running.
 Private Sub Class_Terminate()
   'Force quit process
-  pProcWord.forceQuit
+  If Not pProcWord Is Nothing Then
+    pProcWord.forceQuit
+  End If
 End Sub
