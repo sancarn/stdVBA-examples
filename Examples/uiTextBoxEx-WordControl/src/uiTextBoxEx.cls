@@ -17,6 +17,11 @@ Private pWndWord As stdWindow
 Private pWndWordPane As stdWindow
 Private pProcWord As stdProcess
 
+'Variables to store display settings
+Private pSettingsReadOnly As Boolean
+Private pSettingsAnnotations As Boolean
+Private pSettingsRuler As Boolean
+
 Public Function Create(fr As MSForms.Frame) As uiTextBoxEx
   Set Create = New uiTextBoxEx
   Call Create.protInit(fr)
@@ -34,6 +39,11 @@ Public Property Get Text() As String
 End Property
 Public Property Let Text(RHS As String)
   pAppWordDoc.Content.Text = RHS
+  If pSettingsReadOnly = True Then
+    'Applies Read Only protection (Type = wdAllowOnlyReading = 3)
+    'To Unprotect:   pAppWordDoc.Unprotect
+    pAppWordDoc.Protect Type:=3
+  End If
 End Property
 
 'Get/Set the OpenXML data of the word document. This allows users to save and load formatted text to and from the control.
@@ -46,6 +56,36 @@ Public Property Let OpenXML(RHS As String)
     .Delete
     .InsertXML(RHS)
   End With
+  If pSettingsReadOnly = True Then
+    'Applies Read Only protection (Type = wdAllowOnlyReading = 3)
+    'To Unprotect:   pAppWordDoc.Unprotect
+    pAppWordDoc.Protect Type:=3
+  End If
+End Property
+
+Public Property Get ReadOnly() As Boolean
+  ReadOnly = pSettingsReadOnly
+End Property
+Public Property Let ReadOnly(ReadOnlyState As Boolean)
+  'Read-Only protection is not set until after the text
+  'property has been set
+  pSettingsReadOnly = ReadOnlyState
+End Property
+
+Public Property Get DisplayRuler() As Boolean
+  DisplayRuler = pSettingsRuler
+End Property
+Public Property Let DisplayRuler(DisplayState As Boolean)
+  pSettingsRuler = DisplayState
+  pAppWord.ActiveWindow.ActivePane.DisplayRulers = pSettingsRuler
+End Property
+
+Public Property Get ShowAnnotations() As Boolean
+  ShowAnnotations = pSettingsAnnotations
+End Property
+Public Property Let ShowAnnotations(ShowAnnotationsState As Boolean)
+  pSettingsAnnotations = ShowAnnotationsState
+  pAppWord.ActiveWindow.ActivePane.View.ShowAll = pSettingsAnnotations
 End Property
 
 'Initialise word document
