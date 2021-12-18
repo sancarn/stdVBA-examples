@@ -95,7 +95,7 @@ Friend Sub protInit(fr As MSForms.Frame)
   
   'Set bindings to word
   Set pAppWord = CreateObject("Word.Application")
-  pAppWord.Visible = False
+  pAppWord.Visible = true
   Set pAppWordDoc = pAppWord.documents.Add()
   
   With pAppWord.ActiveWindow
