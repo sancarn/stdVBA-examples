@@ -22,6 +22,9 @@ End Sub
 
 Private Sub UserForm_Initialize()
   Set textBox = uiTextBoxEx.Create(Me.TextBoxFrame)
+  textBox.DisplayRuler = False
+  textBox.ShowAnnotations = False
+  textBox.ReadOnly = True
   textBox.Text = "Yo bruva it's ya boy Jamo and I got something really cool to tell ya " & _
                  "It's so cool that you're gunna shizzle ma nizzle isn't it?"
 End Sub
