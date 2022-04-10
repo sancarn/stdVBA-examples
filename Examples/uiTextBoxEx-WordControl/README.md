@@ -38,7 +38,10 @@ End Sub
 
 * [X] Basic text editing / display
 * [ ] Disable-able (read only)
-* [ ] Is there an easy way to inject and extract formatted text?
+* [X] Is there an easy way to inject and extract formatted text? (Use `OpenXML` property)
+    * [ ] Can the OpenXML be simplified?
+    * [ ] Make a library to generate OpenXML (for the production of auto-formatters e.g. syntax highlighters)
+* [ ] Add a `Textbox.injectToolbar(textBox,frame)` for common commands like `bold`, `italic`, `strikethrough`, `color`, `highlight`, etc. 
 
 ## Known issues
 
