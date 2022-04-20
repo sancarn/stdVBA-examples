@@ -17,59 +17,62 @@ Private pWndWord As stdWindow
 Private pWndWordPane As stdWindow
 Private pProcWord As stdProcess
 
-'Variables to store display settings
+'Variable to store read-only setting
 Private pSettingsReadOnly As Boolean
-Private pSettingsAnnotations As Boolean
-Private pSettingsRuler As Boolean
 
 Public Function Create(fr As MSForms.Frame) As uiTextBoxEx
   Set Create = New uiTextBoxEx
   Call Create.protInit(fr)
 End Function
+
 Public Sub Terminate()
   Set pWndWordPane.parent = pWndWord
   pAppWord.Quit False
   DoEvents
 End Sub
+
 Public Property Get Text() As String
   Text = pAppWordDoc.Content.Text
 End Property
+
 Public Property Let Text(RHS As String)
+  'If the document is protected (i.e., ProtectionType <> wdNoProtection),
+  'remove protection, update the text, and then reapply protection
+  If pSettingsReadOnly And pAppWordDoc.ProtectionType <> -1 Then pAppWordDoc.Unprotect
   pAppWordDoc.Content.Text = RHS
-   
-  If pSettingsReadOnly = True Then
-    'Applies Read Only protection (Type = wdAllowOnlyReading = 3)
-    'To Unprotect:   pAppWordDoc.Unprotect
-    pAppWordDoc.Protect Type:=3
-  End If
+  If pSettingsReadOnly Then pAppWordDoc.Protect Type:=3
+End Property
+
+'Get/Set the OpenXML data of the word document. This allows users to save and load formatted text to and from the control.
+'@returns {String} OpenXML document containing word data
+Public Property Get OpenXML() As String
+  OpenXML = pAppWordDoc.Content.WordOpenXML
+End Property
+
+'If the document is protected (i.e., ProtectionType <> wdNoProtection),
+'remove protection, delete the existing content, insert the replacement XML,
+'and then reapply protection
+Public Property Let OpenXML(RHS As String)
+  If pSettingsReadOnly And pAppWordDoc.ProtectionType <> -1 Then pAppWordDoc.Unprotect
+  With pAppWordDoc.Content
+    .Delete
+    pAppWordDoc.Content.InsertXML RHS
+  End With
+  If pSettingsReadOnly Then pAppWordDoc.Protect Type:=3
 End Property
 
 Public Property Get ReadOnly() As Boolean
   ReadOnly = pSettingsReadOnly
 End Property
 
-Public Property Let ReadOnly(ReadOnlyState As Boolean)
-  'Read-Only protection is not set until after the text
-  'property has been set
-  pSettingsReadOnly = ReadOnlyState
-End Property
-
-Public Property Get DisplayRuler() As Boolean
-  DisplayRuler = pSettingsRuler
-End Property
-
-Public Property Let DisplayRuler(DisplayState As Boolean)
-  pSettingsRuler = DisplayState
-  pAppWord.ActiveWindow.ActivePane.DisplayRulers = pSettingsRuler
-End Property
-
-Public Property Get ShowAnnotations() As Boolean
-  ShowAnnotations = pSettingsAnnotations
-End Property
-
-Public Property Let ShowAnnotations(ShowAnnotationsState As Boolean)
-  pSettingsAnnotations = ShowAnnotationsState
-  pAppWord.ActiveWindow.ActivePane.View.ShowAll = pSettingsAnnotations
+'Applies Read Only protection (Type = wdAllowOnlyReading = 3)
+Public Property Let ReadOnly(state As Boolean)
+  pSettingsReadOnly = state
+  If state Then
+    pAppWordDoc.Protect Type:=3
+  Else
+    If pAppWordDoc.ProtectionType <> -1 Then pAppWordDoc.Unprotect
+  End If
 End Property
 
 Friend Sub protInit(fr As MSForms.Frame)
@@ -79,19 +82,24 @@ Friend Sub protInit(fr As MSForms.Frame)
   'Set bindings to word
   Set pAppWord = CreateObject("Word.Application")
   pAppWord.Visible = False
+
   Set pAppWordDoc = pAppWord.Documents.Add()
   
   With pAppWord.ActiveWindow
+    
     'Customise window properties
     .View.Type = 6 'webLayout
         
     'If the ActiveWindow is in a Maximised state, then the
     'code returns an error for each of the following two lines.
     .WindowState = 0
-    
+  
     'Set width and height to that of the frame
     .Width = pWndUserformFrame.Width - 30
     .Height = pWndUserformFrame.Height
+
+    .ActivePane.DisplayRulers = False
+    .ActivePane.View.ShowAll = False
     
     'Bind class to ActiveWindow object
     Set pWndWord = stdWindow.CreateFromHwnd(.hwnd)
@@ -127,5 +135,7 @@ End Sub
 'Upon termination of the class we need to properly cleanup the word application, as it's still running.
 Private Sub Class_Terminate()
   'Force quit process
-  pProcWord.forceQuit
+  If Not pProcWord Is Nothing Then
+    pProcWord.forceQuit
+  End If
 End Sub
