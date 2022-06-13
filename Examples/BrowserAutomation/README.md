@@ -1,3 +1,10 @@
+<!--
+    {
+        "description": "Automate the web with Chrome",
+        "tags":["web", "automation", "accessibility"],
+        "deps":["stdAcc", "stdEnumerator", "stdLambda", "stdProcess", "stdWindow", "stdICallable"]
+    }
+-->
 # Browser Automation with stdVBA
 
 On 15th June 2022, Internet explorer officially retires as an application. It is uncertain what will happen when this occurs, however many users of VBA rely heavily on Internet Explorer to automate web reports etc. 

@@ -1,3 +1,11 @@
+<!--
+    {
+        "description": "Embed Microsoft Word into a userform",
+        "tags":["ui", "window", "automation", "embedding"],
+        "deps":["stdLambda", "stdWindow", "stdICallable", "stdProcess"]
+    }
+-->
+
 # TextBoxEx for VBA UserForms
 
 This is a text box control which uses a Microsoft Word instance as a userform control. This control offers all the features you get in word, critically **spell checking**.
