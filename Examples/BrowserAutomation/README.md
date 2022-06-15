@@ -43,3 +43,7 @@ This is a stdVBA solution which uses accessibility APIs and Google Chrome to per
 ## Known issues
 
 * [ ] `stdWindow`/`stdAcc` errors can be annoying. In most cases it boils down to an issue of approach, but sometimes it can be race conditions... This needs to be worked out better in `stdVBA`, see some of the examples for best practice approaches.
+
+## Similar projects
+
+* [Chrome DevProtocol](https://github.com/PerditionC/VBAChromeDevProtocol) - stdVBA wants to have a `stdBrowser` which interacts with browser devtool protocols; however this repo is already most of the way there! With this library you'll be able to control browsers on a deeper level and gain the ability to execute javascript for instance.
