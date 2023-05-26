@@ -29,8 +29,10 @@ Friend Sub protInit(lo As ListObject)
     oNewCategory("Name") = vCat("Category")
      
     'Obtain conditions array, which is an array of lambdas, which can each be used to determine whether a targetSheet matches a category
-    Dim conditions As stdArray: Set conditions = stdArray.CreateFromArray(vCat.Values())
+    Dim conditions As stdArray: Set conditions = stdArray.CreateFromArray(vCat.items())
     Call conditions.Shift 'remove first element
+    Set conditions = conditions.Filter(stdLambda.Create("not isObject($1)"))
+    
     Set oNewCategory("Conditions") = conditions.Map(stdCallback.CreateFromObjectMethod(xrLambdaEx, "Create"))
     
     'Bind results to array categories global array
@@ -54,7 +56,7 @@ End Function
 
 'Test categories
 '@test
-Friend Sub Test()
+Friend Sub test()
   Dim cats As xrCategories
   Set cats = xrCategories.Create(dataCategories.ListObjects("Categories"))
   Debug.Print rules.getCategory(testCategories1)

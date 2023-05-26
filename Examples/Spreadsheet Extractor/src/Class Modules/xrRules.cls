@@ -26,7 +26,7 @@ Friend Sub protInit(lo As ListObject)
     'Apply user defined overrides
     Dim oCat As Object: Set oCat = categories(vCat).item(1)
     For Each vKey In oCat.keys()
-      If vKey <> "Category" Then
+      If vKey <> "Category" And Left(vKey, 1) <> "=" Then
         Dim sExpression As String: sExpression = oCat(vKey)
         Set oRetDict(vKey) = xrLambdaEx.Create(sExpression)
       End If
@@ -56,7 +56,7 @@ End Function
 
 'Test Rules
 '@test
-Friend Sub Test()
+Friend Sub test()
   Dim rules As xrRules
   Set rules = xrRules.Create(dataRules.ListObjects("Rules"))
   Debug.Print stringify(rules.executeRules(testCategories1, "1.0.0"))

@@ -1,64 +1,94 @@
 Attribute VB_Name = "xrExtractor"
 Public Sub ExtractorMain()
+  Application.StatusBar = "Setting up..."
+  
+  
   Dim ePaths As stdEnumerator: Set ePaths = stdEnumerator.CreateFromListObject(dataPaths.ListObjects("Paths"))
   Dim categories As xrCategories: Set categories = xrCategories.Create(dataCategories.ListObjects("Categories"))
   Dim rules As xrRules: Set rules = xrRules.Create(dataRules.ListObjects("Rules"))
   
   Dim results As stdArray: Set results = stdArray.Create()
   
-  Dim oPath
+  
+  
+  Dim oPath, i As Long: i = 0
   For Each oPath In ePaths
-    Dim wb As Workbook: Set wb = Workbooks.Open(oPath("Path"))
+    i = i + 1
     
-    Dim ws As Worksheet
-    For Each ws In wb.Worksheets
-      'Get category from sheet data
-      Dim sCategory As String: sCategory = categories.getCategory(ws)
+    'Only extract if Processed <> Yes
+    If oPath("Processed") <> "Yes" Then
+      Dim wb As Workbook: Set wb = Workbooks.Open(oPath("Path"))
       
-      'Perform extraction
-      If sCategory <> "" Then Call results.Push(rules.executeRules(ws, sCategory))
-    Next
-    
-    wb.Close
+      Dim ws As Worksheet
+      For Each ws In wb.Worksheets
+        Application.StatusBar = "Processing workbook " & i & "/" & ePaths.Length & " Worksheet: " & ws.name
+        
+        'Get category from sheet data
+        Dim sCategory As String: sCategory = categories.getCategory(ws)
+        
+        'Perform extraction
+        If sCategory <> "" Then Call results.Push(rules.executeRules(ws, sCategory))
+      Next
+      
+      wb.Close
+      
+      'Update row
+      Call setRowCell(oPath, "Processed", "Yes")
+    End If
   Next
+  
+  Application.StatusBar = Empty
   
   Call exportResults(dataOutput, "Output", results)
 End Sub
 
 
-
 '@param {Worksheet} Sheet to export data to
-'@param {stdEnumerator<Dictionary>} Results to export to range
-Sub exportResults(ByVal ws As Worksheet, ByVal sTableName As String, results As stdArray)
-  Dim vFields: vFields = results.item(1).keys()
-  Dim iFieldLength As Long: iFieldLength = UBound(vFields) - LBound(vFields) + 1
-  
-  Dim vResults() As Variant
-  ReDim vResults(1 To results.Length + 1, 1 To iFieldLength)
-  Dim iResCol As Long: iResCol = 0
-  Dim vField
-  For Each vField In vFields
-    iResCol = iResCol + 1
-    vResults(1, iResCol) = vField
-  Next
-  
-  Dim iRow As Long
-  For iRow = 1 To results.Length
-    iResCol = 0
+'@param {(stdEnumerator|stdArray)<Dictionary>} Results to export to range
+Sub exportResults(ByVal ws As Worksheet, ByVal sTableName As String, results As Object)
+  If TypeOf results Is stdArray Or TypeOf results Is stdEnumerator Then
+    If results.Length = 0 Then Exit Sub 'length guard
+    
+    'Populate headers in result
+    Dim vResults() As Variant
+    Dim vFields: vFields = results.item(1).keys()
+    Dim iFieldLength As Long: iFieldLength = UBound(vFields) - LBound(vFields) + 1
+    ReDim vResults(1 To results.Length + 1, 1 To iFieldLength)
+    Dim iResCol As Long: iResCol = 0
+    Dim vField
     For Each vField In vFields
       iResCol = iResCol + 1
-      vResults(iRow + 1, iResCol) = results.item(iRow)(vField)
+      vResults(1, iResCol) = vField
     Next
-  Next
-  
-  dataOutput.UsedRange.Clear
-  With dataOutput.Range("A1").Resize(results.Length + 1, iFieldLength)
-    .value = vResults
-    .WrapText = False
-    With dataOutput.ListObjects.add(xlSrcRange, .Cells)
-      .name = sTableName
+    
+    'Populate data in result
+    Dim iRow As Long
+    For iRow = 1 To results.Length
+      iResCol = 0
+      For Each vField In vFields
+        iResCol = iResCol + 1
+        vResults(iRow + 1, iResCol) = results.item(iRow)(vField)
+      Next
+    Next
+    
+    'Write data to output
+    dataOutput.UsedRange.Clear
+    With dataOutput.Range("A1").Resize(results.Length + 1, iFieldLength)
+      .value = vResults
+      .WrapText = False
+      With dataOutput.ListObjects.add(xlSrcRange, .Cells)
+        .name = sTableName
+      End With
     End With
-  End With
+  End If
+End Sub
+
+'Given a row object supplied by `stdEnumerator.CreateFromListObject()`, update a cell's value based on it's column name
+'@param {Object} Row object
+'@param {String} Column name
+'@param {Variant} Value to set cell to
+Private Sub setRowCell(ByVal oRow As Object, ByVal sColumnName As String, ByVal vValue As Variant)
+  Application.Intersect(oRow("=ListRow").Range, oRow("=ListColumns")(sColumnName).Range).value = vValue
 End Sub
 
 
