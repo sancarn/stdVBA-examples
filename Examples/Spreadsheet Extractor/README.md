@@ -20,6 +20,8 @@ An extensible tool which can be used to extract any set of spreadsheets (typical
 
 The spreadsheet extractor has been built to extract any data from any spreadsheet given user defined conditions. The initial intention of the tool was to aid in the extraction of data from a set of spreadsheets which are version controlled structured data cards, however the tool has been re-created into a general tool with a codebase fit for any data extraction need across a large set of spreadsheets. The tool processes each sheet/tab of every workbook given in `Paths` tab, categorises it using the rules specified in the `Categories` tab and then runs "Extraction Rules" based on the `Rules` tab. The syntax of the rules is a superset of `stdLambda` syntax, with additional injected functions giving it a formula-like feel. The `stdLambda` syntax is loosely based on VBA's syntax. Please see Section 2 for instructions on how to engineer this this spreadsheet to extract data from your spreadsheets.
 
+![_](docs/Overview.png)
+
 ### 2. Initial Setup
 
 #### a. Set up categories
