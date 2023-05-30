@@ -2,22 +2,35 @@ Attribute VB_Name = "xrExtractor"
 Public Sub ExtractorMain()
   Application.StatusBar = "Setting up..."
   
-  
   Dim ePaths As stdEnumerator: Set ePaths = stdEnumerator.CreateFromListObject(dataPaths.ListObjects("Paths"))
   Dim categories As xrCategories: Set categories = xrCategories.Create(dataCategories.ListObjects("Categories"))
   Dim rules As xrRules: Set rules = xrRules.Create(dataRules.ListObjects("Rules"))
   
   Dim results As stdArray: Set results = stdArray.Create()
   
+  'Boot a new instance of the excel application
+  'opening workbooks in a seperate instance ensures that the workbook isn't loaded on each loop cycle.
+  'it will also ensure that we can set various performance increasing settings, allowing us to scan the
+  'workbook as soon as possible. Finally we can prevent annoyances like Asking to update links.
+  'note we intentionally don't set this app to visible.
+  Dim xlApp As Excel.Application: Set xlApp = New Excel.Application
+  xlApp.AskToUpdateLinks = False
+  xlApp.ScreenUpdating = False
+  xlApp.AutomationSecurity = msoAutomationSecurityForceDisable
+  xlApp.EnableEvents = False
+  xlApp.DisplayAlerts = False
+  xlApp.Calculation = xlCalculationManual
   
-  
+  'Loop over each path in the supplied paths table
   Dim oPath, i As Long: i = 0
   For Each oPath In ePaths
+    'Increment progress counter
     i = i + 1
     
     'Only extract if Processed <> Yes
     If oPath("Processed") <> "Yes" Then
-      Dim wb As Workbook: Set wb = Workbooks.Open(oPath("Path"))
+      'Open workbook in hidden instance
+      Dim wb As Workbook: Set wb = xlApp.Workbooks.Open(oPath("Path"))
       
       Dim ws As Worksheet
       For Each ws In wb.Worksheets
@@ -30,16 +43,20 @@ Public Sub ExtractorMain()
         If sCategory <> "" Then Call results.Push(rules.executeRules(ws, sCategory))
       Next
       
-      wb.Close
+      wb.Close SaveChanges:=False
       
       'Update row
       Call setRowCell(oPath, "Processed", "Yes")
     End If
   Next
   
-  Application.StatusBar = Empty
+  'Close hidden app instance
+  xlApp.Quit
   
+  
+  Application.StatusBar = "Exporting results..."
   Call exportResults(dataOutput, "Output", results)
+  Application.StatusBar = Empty
 End Sub
 
 

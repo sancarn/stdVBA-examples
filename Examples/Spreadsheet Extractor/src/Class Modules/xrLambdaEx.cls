@@ -47,6 +47,14 @@ Private Function GetExtensionLibrary() As Object
     'Add keywords
     Set oLib("stdRegex") = stdRegex
     Set oLib("targetSheet") = Nothing
+    oLib("targetCategory") = ""
+    
+    'Add extensions
+    Dim extension
+    For Each extension In stdEnumerator.CreateFromListObject(dataExtensions.ListObjects("Extensions")).AsCollection
+      Set oLib(extension("Namespace")) = Application.Run("'" & extension("Path") & "'!getExtension")
+    Next
+    ThisWorkbook.Activate
   End If
   Set GetExtensionLibrary = oLib
 End Function
