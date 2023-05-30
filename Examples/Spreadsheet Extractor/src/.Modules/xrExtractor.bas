@@ -30,7 +30,7 @@ Public Sub ExtractorMain()
     'Only extract if Processed <> Yes
     If oPath("Processed") <> "Yes" Then
       'Open workbook in hidden instance
-      Dim wb As Workbook: Set wb = xlApp.Workbooks.Open(oPath("Path"))
+      Dim wb As Workbook: Set wb = forceOpenWorkbook(oPath("Path"), xlApp)
       
       Dim ws As Worksheet
       For Each ws In wb.Worksheets
@@ -99,6 +99,24 @@ Sub exportResults(ByVal ws As Worksheet, ByVal sTableName As String, results As 
     End With
   End If
 End Sub
+
+'Forcefully open a workbook, handling
+'@param {string} Path of workbook to open
+'@param {Excel.Application} Application to open workbook within
+'@returns {Excel.Workbook} Workbook opened / repaired.
+Private Function forceOpenWorkbook(ByVal sPath As String, Optional ByVal xlApp As Excel.Application = Nothing) As Workbook
+  If xlApp Is Nothing Then Set xlApp = Application
+  On Error GoTo TryRepair
+  Set forceOpenWorkbook = xlApp.Workbooks.Open(sPath)
+  Exit Function
+TryRepair:
+  On Error GoTo ErrorOccurred
+  Set forceOpenWorkbook = xlApp.Workbooks.Open(sPath, CorruptLoad:=XlCorruptLoad.xlRepairFile)
+  Exit Function
+ErrorOccurred:
+  Set forceOpenWorkbook = Nothing
+End Function
+
 
 'Given a row object supplied by `stdEnumerator.CreateFromListObject()`, update a cell's value based on it's column name
 '@param {Object} Row object
