@@ -48,7 +48,7 @@ Public Function executeRules(ByVal targetSheet As Worksheet, ByVal sCategory As 
   For Each vKey In rules.keys()
     Dim ld As stdLambda: Set ld = rules(vKey)
     Set ld.oFunctExt("targetSheet") = targetSheet
-    Set ld.oFunctExt("targetCategory") = sCategory
+    ld.oFunctExt("targetCategory") = sCategory
     oRet(vKey) = ld.Run()
   Next
   Set executeRules = oRet
