@@ -19,7 +19,6 @@ Public Sub ExtractorMain()
   xlApp.AutomationSecurity = msoAutomationSecurityForceDisable
   xlApp.EnableEvents = False
   xlApp.DisplayAlerts = False
-  xlApp.Calculation = xlCalculationManual
   
   'Loop over each path in the supplied paths table
   Dim oPath, i As Long: i = 0
