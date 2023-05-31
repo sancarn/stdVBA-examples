@@ -22,6 +22,7 @@ Friend Sub protInit(lo As ListObject)
     Dim oRetDict As Object: Set oRetDict = CreateObject("Scripting.Dictionary")
     Set oRetDict("Path") = xrLambdaEx.Create("targetSheet.parent.fullname")
     Set oRetDict("Sheet") = xrLambdaEx.Create("targetSheet.name")
+    Set oRetDict("Category") = xrLambdaEx.Create("targetCategory")
     
     'Apply user defined overrides
     Dim oCat As Object: Set oCat = categories(vCat).item(1)
@@ -47,6 +48,7 @@ Public Function executeRules(ByVal targetSheet As Worksheet, ByVal sCategory As 
   For Each vKey In rules.keys()
     Dim ld As stdLambda: Set ld = rules(vKey)
     Set ld.oFunctExt("targetSheet") = targetSheet
+    Set ld.oFunctExt("targetCategory") = sCategory
     oRet(vKey) = ld.Run()
   Next
   Set executeRules = oRet
