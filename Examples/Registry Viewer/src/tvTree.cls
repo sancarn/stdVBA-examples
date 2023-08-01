@@ -83,6 +83,13 @@ Private Sub btnRefresh_Click(ByVal Ctrl As Office.CommandBarButton, CancelDefaul
   RaiseEvent OnRefresh(This.nodes(This.tv.SelectedItem.key))
 End Sub
 
+
+Private Sub Class_Terminate()
+  'Required to prevent crash due to circular reference between nodes and roots
+  Set This.nodes = Nothing
+  Set This.roots = Nothing
+End Sub
+
 Private Sub tv_MouseUp(ByVal Button As Integer, ByVal Shift As Integer, ByVal x As stdole.OLE_XPOS_PIXELS, ByVal y As stdole.OLE_YPOS_PIXELS)
   Const BTN_RIGHT_CLICK = 2
   
