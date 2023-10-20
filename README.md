@@ -42,7 +42,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="examples/Registry Viewer">A registry viewer for VBA</a></td>
     <td>DevTool</td>
     <td>Inspect information in the registry without the need for regedit access.</td>
-    <td>registry,win32,viewer,browser</td>
+    <td>registry, win32, viewer, browser</td>
     <td>stdClipboard, stdIcallable, stdLambda, stdReg</td>
     <td>WIP</td>
   </tr> 
@@ -58,7 +58,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="examples/Spreadsheet Extractor">Bulk Spreadsheet Extractor</a></td>
     <td>Data Utility</td>
     <td>Extract information from multiple structured Excel documents to a table. Includes version differentiation.</td>
-    <td>data,extract,bulk</td>
+    <td>data, extract, bulk</td>
     <td>stdArray, stdCallback, stdCOM, stdEnumerator,stdICallable, stdLambda, stdPicture, stdRegex</td>
     <td>Complete</td>
   </tr> 
@@ -90,7 +90,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="examples/xlVBA/xlSaveHandler">Excel custom save handler</a></td>
     <td>Library</td>
     <td>Custom Excel save handler with more events.</td>
-    <td>save,handler,custom,events</td>
+    <td>save, handler, custom, events</td>
     <td>None</td>
     <td>Complete</td>
   </tr>
