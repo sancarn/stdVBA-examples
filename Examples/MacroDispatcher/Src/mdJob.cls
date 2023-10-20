@@ -32,6 +32,7 @@ Private Type TThis
   appPID As Long
   appVBE As stdWindow
   deps As TDependencies
+  isVBOMSet As Boolean
 End Type
 Private This As TThis
 Public Metadata As Object
@@ -48,6 +49,7 @@ Public Sub protInit(ByVal sPath As String, ByVal sMacro As String, ByVal openInR
   This.openInReadOnly = openInReadOnly
   Set This.deps.c = New Collection
   Set This.deps.e = stdEnumerator.CreateEmpty()
+  This.isVBOMSet = VBOMExtensibility
 End Sub
 Public Sub protAddDependency(ByVal dependency As mdJob)
   This.deps.dirty = True
@@ -79,13 +81,17 @@ Public Sub protStep()
     'If all dependencies complete
     Case "Ready"
       'Create the application as seperate process
-      Set This.app = New Application
+      If Not This.isVBOMSet Then VBOMExtensibility = True
+      'Do not create app with `new Application`. If this is used VBOM Extensibility will revert upon creation.
+      Set This.app = CreateObject("Excel.Application")  
+      Set This.appVBE = stdWindow.CreateFromHwnd(This.app.VBE.MainWindow.hwnd)
+      If Not This.isVBOMSet Then VBOMExtensibility = False
       This.app.AskToUpdateLinks = False
       This.app.DisplayAlerts = False
       This.app.AutomationSecurity = msoAutomationSecurityLow
       This.appHandle = This.app.hwnd
       This.appPID = stdWindow.CreateFromHwnd(This.appHandle).ProcessID
-      Set This.appVBE = stdWindow.CreateFromHwnd(This.app.VBE.MainWindow.hwnd)
+      
       
       'Run the specified macro
       Call This.app.Workbooks.open(This.path, False, This.openInReadOnly)
@@ -181,7 +187,16 @@ End Function
 
 
 
-
+Private Property Get VBOMExtensibility() As Boolean
+    Const VBOMPath As String = "HKCU\Software\Microsoft\Office\[Version]\Excel\Security\AccessVBOM"
+    Dim sPath As String: sPath = Replace(VBOMPath, "[Version]", Application.Version)
+    VBOMExtensibility = stdReg.Create(sPath).value = 1
+End Property
+Private Property Let VBOMExtensibility(v As Boolean)
+    Const VBOMPath As String = "HKCU\Software\Microsoft\Office\[Version]\Excel\Security\AccessVBOM"
+    Dim sPath As String: sPath = Replace(VBOMPath, "[Version]", Application.Version)
+    stdReg.Create(sPath).value = IIf(v, 1, 0)
+End Property
 
 Private Function getGUID() As String
   Call Randomize 'Ensure random GUID generated
