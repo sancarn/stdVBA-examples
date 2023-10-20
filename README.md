@@ -34,7 +34,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="examples/MacroDispatcher">Macro Dispatcher</a></td>
     <td>DevTool / AdminTool</td>
     <td>Define exactly which macros should be run in which particular order across multiple spreadsheets. Monitors success and errors.</td>
-    <td>macro,scheduler,dispatcher,bulk,automation,data,process</td>
+    <td>macro, scheduler, dispatcher, bulk, automation, data, process</td>
     <td>stdAcc, stdCallback, stdEnumerator, stdICallable, stdLambda, stdPerformance, stdReg, stdWindow</td>
     <td>Complete</td>
   </tr> 
