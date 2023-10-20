@@ -23,12 +23,6 @@ Attribute VB_Exposed = False
 '    [ ] MacroRecordMode                                                             'via Accessibility
 '    [ ] VBAMode() as EVBAMode                                                       'aka EbMode
 
-#If VBA7 = 0 then
-  Public Enum LongPtr
-    [_]
-  End Enum
-#End If
-
 #If Win64 Then
   Const NULL_PTR as LongLong = 0^
 #Else
@@ -42,9 +36,16 @@ Private Type GUID
     Data4(0 To 7) As Byte
 End Type
 
-Private Declare PtrSafe Function IIDFromString Lib "ole32.dll" (ByVal pstCLS As LongPtr, ByRef iid As GUID) As Long
-Private Declare PtrSafe Function AccessibleObjectFromWindow Lib "oleacc" (ByVal hwnd As LongPtr, ByVal dwId As Long, riid As tGUID, ppvObject As Object) As Long
-
+#if VBA7 then
+  Private Declare PtrSafe Function IIDFromString Lib "ole32.dll" (ByVal pstCLS As LongPtr, ByRef iid As GUID) As Long
+  Private Declare PtrSafe Function AccessibleObjectFromWindow Lib "oleacc" (ByVal hwnd As LongPtr, ByVal dwId As Long, riid As tGUID, ppvObject As Object) As Long
+#else
+  Public Enum LongPtr
+    [_]
+  End Enum
+  Private Declare Function IIDFromString Lib "ole32.dll" (ByVal pstCLS As LongPtr, ByRef iid As GUID) As Long
+  Private Declare Function AccessibleObjectFromWindow Lib "oleacc" (ByVal hwnd As LongPtr, ByVal dwId As Long, riid As tGUID, ppvObject As Object) As Long
+#end if
 
 Public Enum EXLVBAMode
   Running
