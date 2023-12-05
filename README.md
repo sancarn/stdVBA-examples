@@ -102,7 +102,14 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>stdICallable</td>
     <td>Complete</td>
   </tr>
- 
+  <tr>
+    <td><a href="examples/DynamicForm-TransformObject">Dynamically Userform Example</a></td>
+    <td>Library</td>
+    <td>Build a userform dynamically to make changes to an input object.</td>
+    <td>User,Interface,UI</td>
+    <td>stdUIElement, stdCallback, stdCOM, stdICallable, stdLambda</td>
+    <td>Complete</td>
+  </tr>
   <!-- 
   <tr>
     <td><a href="examples/">xxx</a></td>
