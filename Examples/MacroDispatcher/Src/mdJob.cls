@@ -195,7 +195,7 @@ End Property
 Private Property Let VBOMExtensibility(v As Boolean)
     Const VBOMPath As String = "HKCU\Software\Microsoft\Office\[Version]\Excel\Security\AccessVBOM"
     Dim sPath As String: sPath = Replace(VBOMPath, "[Version]", Application.Version)
-    stdReg.Create(sPath).value = IIf(v, 1, 0)
+    Call stdReg.Create(sPath).SetValue(IIf(v, 1, 0), Value_DWORD) 'Ensure DWORD
 End Property
 
 Private Function getGUID() As String
