@@ -1,4 +1,3 @@
-
 # `stdVBA` Examples
 
 This repository holds examples of using `stdVBA`. This should give people a better idea of how to use `stdVBA` and libraries.
@@ -103,6 +102,14 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
+    <td><a href="examples/stdTable">Further SQL-like table operations and class for handling all things table powered by stdEnumerator</a></td>
+    <td>Library</td>
+    <td>A sql-like system for handling Excel ListObjects.</td>
+    <td>sql, listobject, table, update, select, database</td>
+    <td>stdICallable,stdEnumerator,stdCallback,stdJSON</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
     <td><a href="examples/DynamicForm-TransformObject">Dynamically Userform Example</a></td>
     <td>Library</td>
     <td>Build a userform dynamically to make changes to an input object.</td>
@@ -110,6 +117,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>stdUIElement, stdCallback, stdCOM, stdICallable, stdLambda</td>
     <td>Complete</td>
   </tr>
+
   <!-- 
   <tr>
     <td><a href="examples/">xxx</a></td>
