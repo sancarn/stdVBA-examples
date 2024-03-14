@@ -20,6 +20,10 @@ Private Type TDependencies
   c As Collection
   e As stdEnumerator
 End Type
+Private Type TExtensions
+  dirty as boolean
+  c as collection
+End Type
 Private Type TThis
   id As String
   Status As String
@@ -32,6 +36,7 @@ Private Type TThis
   appPID As Long
   appVBE As stdWindow
   deps As TDependencies
+  exts as TExtensions
   isVBOMSet As Boolean
 End Type
 Private This As TThis
@@ -49,11 +54,16 @@ Public Sub protInit(ByVal sPath As String, ByVal sMacro As String, ByVal openInR
   This.openInReadOnly = openInReadOnly
   Set This.deps.c = New Collection
   Set This.deps.e = stdEnumerator.CreateEmpty()
+  set This.exts.c = New Collection
   This.isVBOMSet = VBOMExtensibility
 End Sub
 Public Sub protAddDependency(ByVal dependency As mdJob)
   This.deps.dirty = True
   This.deps.c.add dependency
+End Sub
+Public Sub protAddExtension(ByVal extension as Object)
+  This.exts.dirty = true
+  This.exts.c.add extension
 End Sub
 
 Public Sub protStep()

@@ -32,10 +32,16 @@ Public Sub ExecuteAll()
     End If
   Next
   
-  Call Continue(eJobs)
+  Dim oExtensions as object: set oExtensions = CreateObject("Scripting.Dictionary")
+  Dim extension
+  For each extension in stdEnumerator.CreateFromListObject(shExtensions.ListObjects("Extensions")).AsCollection
+    Set oExtensions(extension("Name")) = Application.Run("'" & extension("Path") & "'!getExtension")
+  next
+  
+  Call Continue(eJobs, oExtensions)
 End Sub
 
-Public Sub Continue(Optional eJobs As stdEnumerator)
+Public Sub Continue(Optional eJobs As stdEnumerator, Optional extensions as Object)
   If eJobs Is Nothing Then Set eJobs = stdEnumerator.CreateFromListObject(shJobs.ListObjects("Jobs"))
   
   'Convert to mdJob objects
@@ -43,7 +49,7 @@ Public Sub Continue(Optional eJobs As stdEnumerator)
   Dim dJobs As Object: Set dJobs = CreateObject("Scripting.Dictionary")
   Dim job As Object 'Dictionary<>
   For Each job In eJobs.AsCollection
-    Dim oJob As mdJob: Set oJob = mdJob.Create(job("Workbook"), job("Macro"), job("ReadOnly"))
+    Dim oJob As mdJob: Set oJob = mdJob.Create(job("Workbook"), job("Macro"), job("ReadOnly"), extensions)
     cJobs.add oJob
     Set dJobs(CStr(job("ID"))) = oJob
     Set oJob.Metadata = job
