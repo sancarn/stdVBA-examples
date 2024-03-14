@@ -45,16 +45,9 @@ Attribute VB_Exposed = False
 '        .fields  'fields ==> stdEnumerator<Dictionary>
 '        .addCalculatedField(sFileName, calculationLambda)
 '        .rows.map(mapper) 'rows ==> stdEnumerator<stdTableRow>
+'Integration examples:
+'*  Call stdJSON.CreateFromVBObject(This.Rows.ToCollection()).ToFile(path)
 
-'stdTable myTable
-' |- stdArray rows
-'    |- stdTableRow row
-'       |- stdDictionary data
-'
-' |
-'
-'
-'
 Private Type TThis
   Name as string
   Headers() as String
@@ -62,9 +55,56 @@ Private Type TThis
 End Type
 Private This as TThis
 
+'Create a new table from a 2d array
+'@param name - The name of the table
+'@param rows - The array to create the table from
+'@param headers as Variant<Array<String>> - The headers of the table. If not specified, the first row of the array is used.
+'@returns - A new table containing the data from the array
+Public Function Create(ByVal name as string, ByVal rows as stdEnumerator, ByVal headers as Variant) as stdTable
+  set Create = new stdTable
+  Redim Preserve headers(1 to UBound(headers)-Lbound(headers)+1) 'Make headers array 1-based
+  Call Create.protInit(name, headers, rows)
+End Function
+
+'Create a new table from a collection
+'@param c as Collection - The collection to create the table from
+'@param Optional tableName as string - The name of the table. If not specified, "Collection" is used.
+'@param Optional fieldName as string - The name of the field to use. If not specified, "Value" is used.
+'@returns - A new table containing the data from the collection
+Public Function CreateFromCollection(ByVal c as Collection, optional byval tableName as string = "Collection", optional byval fieldName as string = "Value", optional autoExpand as boolean = true) as stdTable
+  set CreateFromCollection = CreateFromVariantList(c, tableName, fieldName, autoExpand)
+End Function
+
+'Create a new table from a array
+'@param c as Variand<Array1D<Variant>> - The 1D array to create the table from
+'@param Optional tableName as string - The name of the table. If not specified, "Collection" is used.
+'@param Optional fieldName as string - The name of the field to use. If not specified, "Value" is used.
+'@returns - A new table containing the data from the collection
+Public Function CreateFromArray1D(ByVal c as Collection, optional byval tableName as string = "Collection", optional byval fieldName as string = "Value", optional autoExpand as boolean = true) as stdTable
+  set CreateFromArray1D = CreateFromVariantList(c, tableName, fieldName, autoExpand)
+End Function
+
+'Create from variant list
+Private Function CreateFromVariantList(ByVal c as variant, optional byval tableName as string = "Collection", optional byval fieldName as string = "Value", optional autoExpand as boolean = true) as stdTable
+  'Map collection to collection of rows
+  Dim cc as Collection: set cc = new Collection
+  Dim v: For each v in c
+    Dim row as object: set row = CreateObject("Scripting.Dictionary")
+    row.add fieldName, v
+    Call cc.Add(row)
+  next
+
+  'Create table
+  set CreateFromVariantList = Create(tableName, stdEnumerator.CreateFromIEnumVariant(cc), Array(fieldName))
+  if autoExpand then 
+    Call CreateFromVariantList.FieldExpand(fieldName)
+    Call CreateFromVariantList.FieldsRemove(fieldName)
+  end if
+End Function
+
 'Create a new table from a list object
 '@param lo as ListObject - The list object to create the table from
-'@returns stdTable - A new table containing the data from the list object
+'@returns - A new table containing the data from the list object
 Public Function CreateFromListObject(ByVal lo as ListObject) as stdTable
   Dim headers() as String: Redim headers(1 to lo.ListColumns.Count)
   Dim vHeaders: vHeaders = lo.HeaderRowRange.Value
@@ -82,7 +122,7 @@ End Function
 '@param tableName - The name of the table to create the table from
 '@param ws - The worksheet to search for the table in. If not specified, all worksheets in the workbook are searched.
 '@param wb - The workbook to search for the table in. If not specified, the current workbook is searched.
-'@returns stdTable - A new table containing the data from the list object
+'@returns - A new table containing the data from the list object
 Public Function CreateFromTableByName(ByVal tableName as string, Optional ByVal ws as worksheet = nothing, optional byval wb as workbook = nothing) as stdTable
   if wb is nothing then set wb = ThisWorkbook
   dim lo as ListObject
@@ -115,6 +155,47 @@ Public Function CreateFromRecordSet(ByVal rs as Object) as stdTable
   Call CreateFromRecordSet.protInit(rs.name, headers,stdEnumerator.CreateFromCallable(getNext))
 End Function
 
+'Create a table from a 2d array
+'@param name - The name of the table
+'@param vArr as Variant<Array2D<Variant>> - The array to create the table from
+'@param Optional headers as Boolean - If true, the first row of the array is used as the headers. If false, the headers are not set. If an array of strings, the headers are set to numbers.
+'@returns - A new table containing the data from the array
+Public Function CreateFromArray2D(ByVal name as string, ByVal vArr as Variant, Optional ByVal headers as boolean = true) as stdTable
+  Dim c as Collection: set c = new Collection
+  Dim vHeaders(): Redim vHeaders(1 to UBound(vArr,2)-Lbound(vArr,2)+1)
+  Dim i as long
+  For i = 1 to UBound(vArr,2)
+    if headers then 
+      vHeaders(i) = vArr(1,i)
+    else
+      vHeaders(i) = CStr(i)
+    end if
+  Next i
+  
+  Dim j as long
+  For i = 1 to ubound(vArr,1)
+    Dim row as object: set row = CreateObject("Scripting.Dictionary")
+    For j = 1 to ubound(vArr,2)
+      if headers then 
+        row.Add vArr(1,j), vArr(i,j)
+      else
+        row.Add CStr(j), vArr(i,j)
+      end if
+    Next
+    Call c.Add(row)
+  next
+
+  set CreateFromArray2D = Create(name, stdEnumerator.CreateFromIEnumVariant(c), vHeaders)
+End Function
+
+'Create a table from an excel range
+'@param rng as Object<Excel.Range> - The range to create the table from
+'@param Optional headers as Boolean - If true, the first row of the range is used as the headers. If false, the headers are not set. If an array of strings, the headers are set to numbers.
+'@returns - A new table containing the data from the range
+Public Function CreateFromExcelRange(ByVal rng as Object, Optional ByVal headers as boolean = true) as stdTable
+  set CreateFromExcelRange = CreateFromArray2D(rng.address, rng.Value, headers)
+End Function
+
 'Create a new dictionary from a recordset
 '@protected
 '@param rs as Object<ADODB.RecordSet> - The recordset to create the dictionary from
@@ -144,22 +225,6 @@ End Function
 Public Function protGetDictionaryField(ByVal field as string, ByVal dict as Object, ByVal keyToIgnore as variant) as Variant
   Call CopyVariant(protGetDictionaryField, dict.item(field))
 End Function
-
-
-
-
-'Create a new table from a 2d array
-'@param name as string - The name of the table
-'@param vArr as variant - The array to create the table from
-'@param Optional 
-
-
-'  Function CreateFromArray(vArr as variant) as stdTable
-'  Function CreateFromExcelRange(rng as range) as stdTable
-'  Function CreateFromText(data as string) as stdTable
-
-
-
 
 'Initialize the current table
 '@param name as string - The name of the table
@@ -193,13 +258,12 @@ Public Property Get Rows() as stdEnumerator
   Set Rows = This.Rows
 End Property
 
-'Creates a new table containing only the specified fields from the current table
-'@param Fields() as string - The fields to select
-'@returns stdTable - A new table containing only the specified fields
-Public Function FieldsSelect(ParamArray Fields()) as stdTable
-  set FieldsSelect = Me
-  Redim Preserve Fields(1 to UBound(Fields)+1)
-  This.Headers = Fields
+'Apply a lambda to each row of the current table
+'@param lambda as stdICallable<(row:Object)=>Void> - A lambda or callback that is applied to each row. This can be used to update the rows in place.
+'@returns stdTable - The existing table, including any mutated rows
+Public Function ForEach(ByVal lambda as stdICallable) as stdTable
+  set Update = Me
+  Call This.rows.foreach(lambda)
 End Function
 
 'Filter the current table using the specified lambda
@@ -210,35 +274,140 @@ Public Function Filter(ByVal lambda as stdICallable) as stdTable
   Call Filter.protInit(This.Headers, This.Rows.Filter(lambda))
 End Function
 
+'Creates a new table containing only the specified fields from the current table
+'@param Fields() as string - The fields to select
+'@returns stdTable - A new table containing only the specified fields
+Public Function FieldsSelect(ParamArray Fields()) as stdTable
+  set FieldsSelect = Me
+  Redim Preserve Fields(1 to UBound(Fields)+1)
+  This.Headers = Fields
+End Function
+
+'Remove fields from the current table
+'@param ParamArray<> - The fields to remove
+'@returns stdTable - The existing table with the fields removed
+Public Function FieldsRemove(ParamArray fields()) as stdTable
+  set FieldsRemove = Me
+  Dim toRemove as Object: set toRemove = CreateObject("Scripting.Dictionary")
+  Dim i as long
+  For i = 0 to UBound(fields)
+    toRemove.Add fields(i), true
+  Next i
+
+  'Remove from headers
+  Dim vNewHeaders() as string: Redim vNewHeaders(1 to UBound(This.Headers) - UBound(fields))
+  Dim index as long: index = 1
+  For i = 1 to UBound(This.Headers)
+    if not toRemove(This.Headers(i)) then
+      vNewHeaders(index) = This.Headers(i)
+      index = index + 1
+    end if
+  next
+  This.Headers = vNewHeaders
+End Function
+
 'Update a field of the current table using the specified lambda
 '@param field - The name of the field to update
 '@param lambda as stdICallable<(row:Object)=>variant> - A lambda or callback that takes a row and returns a value to set the field to
 '@returns stdTable - The existing table.
-Public Function UpdateField(ByVal field as string, ByVal lambda as stdICallable) as stdTable
-  set UpdateField = Me
+Public Function FieldUpdate(ByVal field as string, ByVal lambda as stdICallable) as stdTable
+  set FieldUpdate = Me
   Dim row as object
   For each row in This.Rows
     row(field) = lambda.Run(row)
   next
 End Function
 
+'Rename fields
+'@param Paramarray<> - The fields to rename. Each pair of arguments is a field to rename and the new name for that field.
+'@returns stdTable - The existing table with mutated field names
+Public Function FieldsRename(ParamArray fields()) as stdTable
+  set FieldsRename = Me
+
+  Dim i as long
+  For i = 0 to UBound(fields) Step 2
+    Dim oldName as string: oldName = fields(i)
+    Dim newName as string: newName = fields(i+1)
+    Dim j as long, renamed as boolean: renamed = false
+    For j = 1 to UBound(This.Headers)
+      if This.Headers(j) = oldName then 
+        This.Headers(j) = newName
+        Renamed = true
+        Exit For
+      end if
+    Next j
+    if not renamed then Err.Raise 5, "stdTable.FieldsRename", "Field '" & oldName & "' not found"
+  Next i
+
+  Dim row as object
+  For each row in this.rows
+    For i = 0 to Ubound(fields) step 2
+      row.item(fields(i+1)) = row.item(fields(i))
+      Call row.Remove(fields(i))
+    Next i
+  next row
+End Function
+
+'Add a field to the current table
+'@param field as string - The name of the field to add
+'@param lambda as stdICallable<(row:Object)=>variant> - A lambda or callback that takes a row and returns a value to set the field to
+'@returns stdTable - The existing table with the new field
+Public Function FieldAdd(ByVal field as string, ByVal lambda as stdICallable) as stdTable
+  set FieldAdd = Me
+  
+  'Ensure field doesn't already exist
+  Dim i as long: For i = 1 to ubound(this.headers)
+    if this.headers(i) = field then Err.Raise 5, "stdTable.FieldAdd", "Field '" & field & "' already exists"
+  next
+
+  'Add to fields
+  Redim Preserve This.Headers(1 to UBound(This.Headers)+1)
+  This.Headers(UBound(This.Headers)) = field
+
+  'Map lambda to field
+  Dim row as object
+  For each row in This.Rows
+    row(field) = lambda.Run(row)
+  next
+End Function
+
+'Expand object fields
+'@param field as string - The field to expand
+'@returns stdTable - The existing table.
+'@example - For the table `[{"Car":{"Doors":2}}, {"Car":{"Doors":3}}, ...]`
+'           The code `FieldExpand("Car")` would return the table `[{"Doors":2,"Car":{"Doors":2}}, {"Doors":3,"Car":{"Doors":2}}, ...]`
+Public Function FieldExpand(ByVal field as string) as stdTable
+  set FieldExpand = Me
+  For each row in This.Rows
+    if isObject(row(field)) then
+      Dim target as Object: set target = row(field)
+      select case typename(target)
+        case "Dictionary"
+          Dim key as variant
+          For each key in target.keys()
+            Call CopyVariant(row(key), target(key))
+          next
+        case else
+          Dim prop as variant
+          For each prop in stdCOM.Create(target).Properties
+            Call CopyVariant(row(prop), stdCallback.CreateFromObjectProperty(target, prop, vbGet).Run())
+          next
+      end select
+    else
+      Err.Raise 5, "stdTable.FieldExpand", "Field '" & field & "' does not contain an object. Cannot expand."
+    end if
+  next
+End Function
+
 'Update a field of the current table to a specified value
 '@param field - The name of the field to update
 '@returns stdTable - The existing table.
-Public Function UpdateFieldStatic(ByVal field as string, ByVal value as variant) as stdTable
-  set UpdateFieldStatic = Me
+Public Function FieldUpdateStatic(ByVal field as string, ByVal value as variant) as stdTable
+  set FieldUpdateStatic = Me
   Dim row as object
   For each row in This.Rows
     row(field) = value
   next
-End Function
-
-'Apply a lambda to each row of the current table
-'@param lambda as stdICallable<(row:Object)=>Void> - A lambda or callback that is applied to each row. This can be used to update the rows in place.
-'@returns stdTable - The existing table, including any mutated rows
-Public Function ForEach(ByVal lambda as stdICallable) as stdTable
-  set Update = Me
-  Call This.rows.foreach(lambda)
 End Function
 
 'Link 1 table to another 
@@ -272,59 +441,6 @@ Public Function Join(ByVal table2 as stdTable, ByVal field1 as string, ByVal fie
   next
 End Function 
 
-'Rename fields
-'@param Paramarray<> - The fields to rename. Each pair of arguments is a field to rename and the new name for that field.
-'@returns stdTable - The existing table with mutated field names
-Public Function RenameFields(ParamArray fields()) as stdTable
-  set RenameFields = Me
-
-  Dim i as long
-  For i = 0 to UBound(fields) Step 2
-    Dim oldName as string: oldName = fields(i)
-    Dim newName as string: newName = fields(i+1)
-    Dim j as long, renamed as boolean: renamed = false
-    For j = 1 to UBound(This.Headers)
-      if This.Headers(j) = oldName then 
-        This.Headers(j) = newName
-        Renamed = true
-        Exit For
-      end if
-    Next j
-    if not renamed then Err.Raise 5, "stdTable.RenameFields", "Field '" & oldName & "' not found"
-  Next i
-
-  Dim row as object
-  For each row in this.rows
-    For i = 0 to Ubound(fields) step 2
-      row.item(fields(i+1)) = row.item(fields(i))
-      Call row.Remove(fields(i))
-    Next i
-  next row
-End Function
-
-'Add a field to the current table
-'@param field as string - The name of the field to add
-'@param lambda as stdICallable<(row:Object)=>variant> - A lambda or callback that takes a row and returns a value to set the field to
-'@returns stdTable - The existing table with the new field
-Public Function AddField(ByVal field as string, ByVal lambda as stdICallable) as stdTable
-  set AddField = Me
-  
-  'Ensure field doesn't already exist
-  Dim i as long: For i = 1 to ubound(this.headers)
-    if this.headers(i) = field then Err.Raise 5, "stdTable.AddField", "Field '" & field & "' already exists"
-  next
-
-  'Add to fields
-  Redim Preserve This.Headers(1 to UBound(This.Headers)+1)
-  This.Headers(UBound(This.Headers)) = field
-
-  'Map lambda to field
-  Dim row as object
-  For each row in This.Rows
-    row(field) = lambda.Run(row)
-  next
-End Function
-
 'Concat rows from a Collection to the current table
 '@param c as Collection - The collection to concat
 '@returns stdTable - The existing table with the new rows
@@ -355,7 +471,6 @@ Public Function Reverse() as stdTable
   set Reverse = new stdTable
   Call Reverse.protInit(This.name, This.Headers, This.Rows.Reverse())
 End Function
-
 
 'Group the current table by the specified field. Each row generated by this function will have 2 fields, 1 real and 1 virtual. The virtual field will not be part of the object but not in the headers (and not export in any To___() methods).
 'Output is of the form: `[{key:..., group:stdEnumerator<Dictionary<string,variant>>},...]`
@@ -543,31 +658,8 @@ Public Function ToJSON() as string
   End With
 End Function
 
-'Export table to JSON file
-'@returns - A JSON string containing the data from the table
-'@requires stdJSON
-Public Sub ToJSONFile(ByVal path as string)
-  With stdJSON.Create(eJSONArray)
-    Dim row as Object
-    For each row in This.Rows.ToCollection()
-      Call .Add(row)
-    Next
-    Call .ToFile(path)
-  End With
-End Sub
 
-'Export table to CSV
-'@returns - A CSV string containing the data from the table
-'@requires stdCSV
-Public Sub ToCSVFile(ByVal path as string)
-  With stdCSV.Create(This.Headers)
-    Dim row as Object
-    For each row in This.Rows.ToCollection()
-      Call .AddArray(row.items())
-    Next
-    Call .ToFile(path)
-  End With
-End Sub
+
 
 
 
