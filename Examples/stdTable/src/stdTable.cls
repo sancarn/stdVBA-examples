@@ -271,7 +271,7 @@ End Function
 '@returns stdTable - A new table containing only the rows that passed the filter
 Public Function Filter(ByVal lambda as stdICallable) as stdTable
   set Filter = new stdTable
-  Call Filter.protInit(This.Headers, This.Rows.Filter(lambda))
+  Call Filter.protInit(This.name, This.Headers, This.Rows.Filter(lambda))
 End Function
 
 'Creates a new table containing only the specified fields from the current table

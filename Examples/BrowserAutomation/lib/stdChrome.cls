@@ -28,6 +28,7 @@ Private Type TThis
     Window As stdWindow
     accMain As stdAcc
     accAddressBar As stdAcc
+    isTemporaryWindow As Boolean
 End Type
 Private This As TThis
 
@@ -35,8 +36,11 @@ Private This As TThis
 '*          CONSTRUCTOR METHODS           *
 '******************************************
 
-'Create a new
-Public Function Create(Optional ByVal userParams As String = "") As stdChrome
+'Create a new Chrome window
+'@param {String} User parameters to pass to Chrome
+'@param {Boolean} If true, the window will close when the object is destroyed, else it will remain open
+'@returns {stdChrome} Chrome automation object
+Public Function Create(Optional ByVal userParams As String = "", optional byval closeOnDestroy as boolean = true) As stdChrome
     'Create application GUID
     Dim sGUID As String: sGUID = getGUID()
     
@@ -59,15 +63,17 @@ Public Function Create(Optional ByVal userParams As String = "") As stdChrome
     
     'Initialise chrome automation object
     Set Create = New stdChrome
-    Call Create.protInit(wnd)
+    Call Create.protInit(wnd, closeOnDestroy)
 End Function
 
 'Create from an existing window object
 '@param {stdWindow} Window to create Chrome automation object from
+'@param {Boolean} If true, the window will close when the object is destroyed, else it will remain open
+'@returns {stdChrome} Chrome automation object for the specified window
 '@remark Won't be able to force accessibility, therefore will need accessibility assurance otherwise only a finite set of options will be available
-Public Function CreateFromExisting(ByVal wnd As stdWindow)
+Public Function CreateFromExisting(ByVal wnd As stdWindow, Optional ByVal closeOnDestroy as boolean = false)
     Set CreateFromExisting = New stdChrome
-    Call CreateFromExisting.protInit(wnd)
+    Call CreateFromExisting.protInit(wnd, closeOnDestroy)
 End Function
 
 '*************************************
@@ -101,6 +107,15 @@ Public Property Let Address(v As String)
         Call This.Window.SendKeysEvent("{ENTER}")
         DoEvents
     Wend
+End Property
+
+'Get/Let isTemporary
+'@returns {Boolean} If set to true, the window will close when the object is destroyed, else it will remain open
+Public Property Get isTemporary() As Boolean
+    isTemporary = This.isTemporaryWindow
+End Property
+Public Property Let isTemporary(v As Boolean)
+    This.isTemporaryWindow = v
 End Property
 
 'Helper calling Address=
@@ -164,11 +179,12 @@ End Sub
 
 'Initialise object with window
 '@param {stdWindow} Window to initialise Chrome automation object from
-Friend Sub protInit(wnd As stdWindow)
+Friend Sub protInit(wnd As stdWindow, isTemporary As Boolean)
     With This
         Set .Window = wnd
         Set .accMain = stdAcc.CreateFromHwnd(wnd.Handle)
         Set .accAddressBar = .accMain.FindFirst(stdLambda.Create("$1.Name like ""Address and search bar"" and $1.Role = ""ROLE_TEXT"""))
+        .isTemporaryWindow = isTemporary
     End With
 End Sub
 
@@ -177,7 +193,7 @@ End Sub
 '*************************************
 
 Private Sub Class_Terminate()
-    If This.Window.Exists Then Call This.Window.Quit
+    If This.Window.Exists and This.isTemporaryWindow Then Call This.Window.Quit
 End Sub
 
 '**************************************

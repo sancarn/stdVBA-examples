@@ -9,14 +9,6 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 Implements genIInjector
 
-#If VBA7 Then
-  Private Declare PtrSafe Function PostMessageA Lib "user32" (ByVal hwnd As LongPtr, ByVal wMsg As Long, ByVal wParam As Any, ByVal lParam As Any) As Long
-  Private Declare PtrSafe Sub Sleep Lib "kernel32" (ByVal dwMilliseconds As Long)
-#Else
-  Private Declare Function PostMessageA Lib "user32" (ByVal hwnd As LongPtr, ByVal wMsg As Long, ByVal wParam As Any, ByVal lParam As Any) As Long
-  Private Declare Sub Sleep Lib "Kernel32" (ByVal dwMilliseconds As Long)
-#End If
-
 Private Type TThis
   templatePath As String
   templatePresentation As Object 'PowerPoint.Presentation
@@ -52,26 +44,96 @@ End Sub
 '  Next
 '```
 Public Function getFormulaBindings() As stdEnumerator
-  Dim bindings As Collection: Set bindings = FindAll(This.templatePresentation, "*$*")
   Dim tmp As Collection: Set tmp = New Collection
-  For Each shape In bindings
-    Dim address As String: address = shape.Parent.name & "::" & shape.name
-    Call tmp.add(CreateDictionary( _
-      "lambda", shape.textFrame.TextRange.Text, _
-      "setter", stdCallback.CreateFromObjectMethod(Me, "setValue").Bind(address), _
-      "getSetterTarget", stdCallback.CreateFromObjectMethod(Me, "getShape").Bind(address), _
-      "meta", CreateDictionary() _
-    ))
+
+  Dim slide As Object
+  For Each slide In This.templatePresentation.Slides
+    'If notes present then add to bindings
+    If slide.HasNotesPage Then
+      Dim notes As String: notes = slide.NotesPage.Shapes(2).textFrame.TextRange.Text
+      If notes Like "*$*" Then
+        Dim address As String: address = "slide::" & slide.name
+        Call tmp.add(CreateDictionary( _
+          "lambda", notes, _
+          "setter", stdCallback.CreateFromObjectMethod(Me, "setValue").Bind(address), _
+          "getSetterTarget", stdCallback.CreateFromObjectMethod(Me, "getTargetBinding").Bind(address), _
+          "meta", CreateDictionary() _
+        ))
+      End If
+    End If
+
+    Dim shape As Object
+    For Each shape In slide.Shapes
+      Call handleBindingsForShape(slide, shape, tmp)
+    Next
   Next
 
   Set getFormulaBindings = stdEnumerator.CreateFromIEnumVariant(tmp)
 End Function
 
+'Append all bindings for a given shape to the binding collection
+'@param slide - The slide the shape is on
+'@param shape - The shape to handle the bindings for
+'@param bindings - The collection to add the bindings to
+Private Sub handleBindingsForShape(ByVal slide as object, ByVal shape as object, ByVal bindings as Collection)
+  const msoGroup = 6
+  const msoTable = 19
+  Dim Text As String, address As String
+  select case shape.type
+    case msoGroup
+      Dim subShape as Object
+      For Each subShape In shape.GroupItems
+        Call handleBindingsForShape(slide, subShape, bindings)
+      Next
+    case msoTable
+      Dim row as Object, iRow as long: iRow = 0
+      For Each row In shape.table.Rows
+        iRow = iRow + 1
+        Dim cell as Object, iCell as long: iCell = 0
+        For Each cell In row.Cells
+          iCell = iCell + 1
+          Text = cell.Shape.textFrame.TextRange.Text
+          If Text Like "*$*" Then
+            address = "table::" & slide.name & "::" & shape.name & "::" & iRow & "::" & iCell
+            Call bindings.add(CreateDictionary( _
+              "lambda", Text, _
+              "setter", stdCallback.CreateFromObjectMethod(Me, "setValue").Bind(address), _
+              "getSetterTarget", stdCallback.CreateFromObjectMethod(Me, "getTargetBinding").Bind(address), _
+              "meta", CreateDictionary() _
+            ))
+          End If
+        Next
+      Next
+    case else
+      If shape.HasTextFrame Then
+        If shape.textFrame.HasText Then
+          Text = shape.textFrame.TextRange.Text
+          If Text Like "*$*" Then
+            address = "shape::" & slide.name & "::" & shape.name
+            Call bindings.add(CreateDictionary( _
+              "lambda", Text, _
+              "setter", stdCallback.CreateFromObjectMethod(Me, "setValue").Bind(address), _
+              "getSetterTarget", stdCallback.CreateFromObjectMethod(Me, "getTargetBinding").Bind(address), _
+              "meta", CreateDictionary() _
+            ))
+          End If
+        End If
+      End If
+  end select
+End Sub
+
 
 'Initialise the target presentation
 Public Function InitialiseTarget() As Object
+  'Create presentation
   Set This.targetPresentation = This.appPowerPoint.Presentations.add()
-  'this.targetPresentation.ApplyTemplate(This.templatePath) '<== Not sure if this works for non .potx files
+  
+  'Ensure slide layout is the same as the template
+  This.targetPresentation.PageSetup.SlideOrientation = This.templatePresentation.PageSetup.SlideOrientation
+  This.targetPresentation.PageSetup.SlideWidth = This.templatePresentation.PageSetup.SlideWidth
+  This.targetPresentation.PageSetup.SlideHeight = This.templatePresentation.PageSetup.SlideHeight
+  
+  'Insert slides from template
   Call This.targetPresentation.Slides.insertFromFile(This.templatePath, 0)
   
   'Return presentation object
@@ -87,74 +149,93 @@ End Sub
 '@param address - The address of the shape to set the value of (in the form "SlideName::ShapeName")
 '@param value - The value to set the shape content to
 Public Sub setValue(ByVal address As String, ByVal value As Variant)
-  Dim shape As Object: Set shape = getTargetBinding(address)
-  Dim slide As Object: Set slide = shape.Parent
+  Const ppAlertsAll As Long = 2
+  Const ppAlertsNone As Long = 1
+  Dim targetType As String: targetType = Split(address, "::")(0)
+  Dim target As Object: Set target = getTargetBinding(address)
+  Dim slide As Object: Set slide = getTargetBindingSlide(address)
   If IsObject(value) Then
     Select Case TypeName(value)
       Case "Dictionary"
         If value.Exists("Type") Then
           Select Case value("Type")
             Case "Picture"
-              Dim p As Object: Set p = slide.shapes.AddPicture(value("Path"), msoTrue, msoTrue, 0, 0)
-              Call shape.Fill.UserPicture(value("Path"))
-              Dim factor As Double: factor = min(shape.height / p.height, shape.width / p.width)
-              shape.PictureFormat.Crop.PictureWidth = p.width * factor
-              shape.PictureFormat.Crop.PictureHeight = p.height * factor
-              p.Delete
-              shape.textFrame.TextRange.Text = ""
+              select case targetType 
+                case "shape", "table"
+                  On Error GoTo ErrorImportingImage
+                  This.appPowerPoint.DisplayAlerts = ppAlertsNone
+                  Dim p As Object: Set p = slide.Shapes.AddPicture(value("Path"), msoTrue, msoTrue, 0, 0)
+                  This.appPowerPoint.DisplayAlerts = ppAlertsAll
+                  On Error GoTo 0
+                  Call target.Fill.UserPicture(value("Path"))
+                  Dim factor As Double: factor = min(target.height / p.height, target.width / p.width)
+                  target.PictureFormat.Crop.PictureWidth = p.width * factor
+                  target.PictureFormat.Crop.PictureHeight = p.height * factor
+                  p.Delete
+                  target.textFrame.TextRange.Text = ""
+                  Exit Sub
+ErrorImportingImage:
+                  target.textFrame.TextRange.Text = "ERROR: Picture cannot be imported."
+                  Exit Sub
+                case else
+                  Err.Raise 1, "setValue", "ERROR: Pictures can only be added to shapes, not " & targetType & "s"
+              End Select
             Case Else
-              shape.textFrame.TextRange.Text = "ERROR: Unsupported dictionary type '" & value("Type") & "'"
+              Select Case targetType
+                Case "shape", "table"
+                  target.textFrame.TextRange.Text = "ERROR: Unsupported dictionary type '" & value("Type") & "'"
+                Case Else
+                  Err.Raise 1, "setValue", "ERROR: Unsupported dictionary type '" & value("Type") & "'"
+              End Select
           End Select
         Else
-          shape.textFrame.TextRange.Text = "ERROR: Unsupported dictionary"
+          Select Case targetType
+            Case "shape", "table"
+              target.textFrame.TextRange.Text = "ERROR: Unsupported dictionary"
+            Case Else
+              Err.Raise 1, "setValue", "ERROR: Unsupported dictionary"
+          End Select
         End If
       Case Else
-          shape.textFrame.TextRange.Text = "ERROR: Unsupported object type '" & TypeName(value) & "'"
+        Select Case targetType
+          Case "shape", "table"
+            target.textFrame.TextRange.Text = "ERROR: Unsupported object type '" & TypeName(value) & "'"
+          Case Else
+            Err.Raise 1, "setValue", "ERROR: Unsupported object type '" & TypeName(value) & "'"
+        End Select
     End Select
   Else
-      shape.textFrame.TextRange.Text = value
+    Select Case targetType
+      Case "shape", "table"
+        target.textFrame.TextRange.Text = value
+      Case Else
+        'Do nothing
+    End Select
   End If
 End Sub
-
-Public Function getShape(ByVal address As String) As Object
-  Set getShape = getTargetBinding(address)
-End Function
 
 'Obtain a binding from the target
 '@param address - The address of a shape to get
 '@returns Object<PowerPoint.Shape> - Powerpoint shape object for the current target
-Private Function getTargetBinding(ByVal address As String) As Object
-  Dim slideName As String: slideName = Split(address, "::")(0)
-  Dim shapeName As String: shapeName = Split(address, "::")(1)
-  Dim slide As Object: Set slide = This.targetPresentation.Slides(slideName)
-  Set getTargetBinding = slide.shapes(shapeName)
+Public Function getTargetBinding(ByVal address As String) As Object
+  Dim addressParts As Variant: addressParts = Split(address, "::")
+  Select Case addressParts(0)
+    Case "slide"
+      Set getTargetBinding = This.targetPresentation.Slides(addressParts(1))
+    Case "shape"
+      Set getTargetBinding = This.targetPresentation.Slides(addressParts(1)).Shapes(addressParts(2))
+    case "table"
+      Set getTargetBinding = This.targetPresentation.Slides(addressParts(1)).Shapes(addressParts(2)).table.cell(addressParts(3), addressParts(4)).Shape
+  End Select
 End Function
 
-'Find all the shapes in the presentation that contain text
-'@param presentation - The presentation to search
-'@param findWhat - The text to search for
-'@returns Collection<Object<Powerpoint.Shape>> - A collection of shapes that contain the text
-Private Function FindAll(ByVal presentation As Object, ByVal findWhat As String) As Collection
-  Dim c As Collection: Set c = New Collection
-
-  Dim slide As Object
-  For Each slide In presentation.Slides
-    Dim shape As Object
-    For Each shape In slide.shapes
-      If shape.HasTextFrame Then
-        Dim textFrame As Object: Set textFrame = shape.textFrame
-        If textFrame.HasText Then
-          Dim Text As String: Text = textFrame.TextRange.Text
-          If Text Like "*$*" Then
-            Call c.add(shape)
-          End If
-        End If
-      End If
-    Next
-  Next
-  Set FindAll = c
+'Obtain a binding slide from the target
+'@param address - The address of a binding to get the slide for
+'@returns Object<PowerPoint.Slide> - Powerpoint slide object for the current target
+Public Function getTargetBindingSlide(ByVal address as string) as Object
+  Dim addressParts As Variant: addressParts = Split(address, "::")
+  set getTargetBindingSlide = This.targetPresentation.Slides(addressParts(1))
 End Function
-
 
 'Find the minimum of two numbers
 '@param a - The first number
@@ -214,5 +295,7 @@ End Function
 Private Sub genIInjector_CleanupTarget()
   Call CleanupTarget
 End Sub
+
+
 
 
