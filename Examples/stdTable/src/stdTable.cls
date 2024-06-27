@@ -488,7 +488,7 @@ End Function
 '@param keyName as string - The name of the field to store the key in
 '@param virtualName as string - The name of the virtual field to store the grouped rows in
 '@returns - A new table containing the grouped rows
-Public Function GroupBy(ByVal lambda as stdICallable, Optional ByVal keyName as string, Optional ByVal virtualName as string = "group") as stdTable
+Public Function GroupBy(ByVal lambda as stdICallable, Optional ByVal keyName as string = "groupKey", Optional ByVal virtualName as string = "group") as stdTable
   set GroupBy = new stdTable
   set groups = This.Rows.GroupBy(lambda)
   Dim cRows as Collection: set cRows = new Collection
@@ -545,6 +545,17 @@ Public Function ToArray2D() as Variant
     Next j
   Next row
   ToArray2D = arr
+End Function
+
+'Export the table to a range
+'@param rng as Range - The range to export the table to
+'@returns Range - The full range that was created
+Public Function ToExcelRange(ByVal rng as Object) as Object
+  Dim arr as Variant: arr = ToArray2D()
+  Dim numRows as Long: numRows = UBound(arr,1)
+  Dim numCols as Long: numCols = UBound(arr,2)
+  set ToExcelRange = rng.Resize(numRows, numCols)
+  ToExcelRange.Value2 = arr
 End Function
 
 'Export the table to a list object
