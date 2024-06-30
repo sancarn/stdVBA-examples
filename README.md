@@ -24,9 +24,33 @@ This repository holds examples of using `stdVBA`. This should give people a bett
   <tr>
     <td><a href="examples/BrowserAutomation">Automate the web with Chrome</a></td>
     <td>Library</td>
-    <td>Automate chrome for web scraping or UI presentation.</td>
+    <td>Automate major browsers for web scraping or UI presentation.</td>
     <td>web, automation, accessibility, library</td>
     <td>stdAcc, stdEnumerator, stdLambda, stdProcess, stdWindow, stdICallable</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td><a href="examples/Document Generator">Create documents based on tabular data</a></td> 
+    <td>Data Utility</td>
+    <td>Build a userform dynamically to make changes to an input object.</td>
+    <td>automation, data, document, generator, library, table</td>
+    <td>stdCallback, stdCOM, stdEnumerator, stdICallable, stdLambda, stdRegex, stdTable, stdWindow</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td><a href="examples/DynamicForm-TransformObject">Dynamically Userform Example</a></td>
+    <td>Library</td>
+    <td>Build a userform dynamically to make changes to an input object.</td>
+    <td>User,Interface,UI</td>
+    <td>stdUIElement, stdCallback, stdCOM, stdICallable, stdLambda</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td><a href="examples/JSON Viewer">JSON Viewer</a></td> 
+    <td>DevTool</td>
+    <td>Inspect JSON data in a userform.</td>
+    <td>json, viewer, browser</td>
+    <td>stdCallback, stdICallable, stdJSON, stdLambda, tvTree</td>
     <td>Complete</td>
   </tr>
   <tr>
@@ -37,6 +61,14 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>stdAcc, stdCallback, stdEnumerator, stdICallable, stdLambda, stdPerformance, stdReg, stdWindow</td>
     <td>Complete</td>
   </tr> 
+  <tr>
+    <td><a href="examples/Notepad-GetAllTextAndClose">Notepad GetAllTextAndClose Utility</a></td>
+    <td>Utility</td>
+    <td>Get all text from all open Notepad tabs and close them. Useful when you use Notepad for note taking.</td>
+    <td>notepad, utility, automation, data, extract</td>
+    <td>stdAcc, stdICallable, stdLambda, stdProcess, stdWindow</td>
+    <td>Complete</td>
+  </tr>
   <tr>
     <td><a href="examples/Registry Viewer">A registry viewer for VBA</a></td>
     <td>DevTool</td>
@@ -61,6 +93,14 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>stdArray, stdCallback, stdCOM, stdEnumerator,stdICallable, stdLambda, stdPicture, stdRegex</td>
     <td>Complete</td>
   </tr> 
+  <tr>
+    <td><a href="examples/stdTable">Further SQL-like table operations and class for handling all things table powered by stdEnumerator</a></td>
+    <td>Library</td>
+    <td>A sql-like system for handling Excel ListObjects.</td>
+    <td>sql, listobject, table, update, select, database</td>
+    <td>stdICallable,stdEnumerator,stdCallback,stdJSON</td>
+    <td>Complete</td>
+  </tr>
   <tr>
     <td><a href="examples/Timer">Timer</a></td>
     <td>Library</td>
@@ -101,22 +141,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>stdICallable</td>
     <td>Complete</td>
   </tr>
-  <tr>
-    <td><a href="examples/stdTable">Further SQL-like table operations and class for handling all things table powered by stdEnumerator</a></td>
-    <td>Library</td>
-    <td>A sql-like system for handling Excel ListObjects.</td>
-    <td>sql, listobject, table, update, select, database</td>
-    <td>stdICallable,stdEnumerator,stdCallback,stdJSON</td>
-    <td>Complete</td>
-  </tr>
-  <tr>
-    <td><a href="examples/DynamicForm-TransformObject">Dynamically Userform Example</a></td>
-    <td>Library</td>
-    <td>Build a userform dynamically to make changes to an input object.</td>
-    <td>User,Interface,UI</td>
-    <td>stdUIElement, stdCallback, stdCOM, stdICallable, stdLambda</td>
-    <td>Complete</td>
-  </tr>
+
 
   <!-- 
   <tr>
