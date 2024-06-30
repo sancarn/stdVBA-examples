@@ -14,7 +14,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <th>Status</th>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/Accessibility%20Inspector">Accessibility Inspector</a></td>
+    <td><a href="Examples/Accessibility%20Inspector">Accessibility Inspector</a></td>
     <td>DevTool</td>
     <td>Inspect the accessibility information of controls UI controls. Critical for UI automation.</td>
     <td>ui, window, automation, embedding</td>
@@ -22,7 +22,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete/WIP</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/BrowserAutomation">Automate the web with Chrome</a></td>
+    <td><a href="Examples/BrowserAutomation">Automate the web with Chrome</a></td>
     <td>Library</td>
     <td>Automate major browsers for web scraping or UI presentation.</td>
     <td>web, automation, accessibility, library</td>
@@ -30,7 +30,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/Document Generator">Create documents based on tabular data</a></td> 
+    <td><a href="Examples/Document Generator">Create documents based on tabular data</a></td> 
     <td>Data Utility</td>
     <td>Build a userform dynamically to make changes to an input object.</td>
     <td>automation, data, document, generator, library, table</td>
@@ -38,7 +38,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/DynamicForm-TransformObject">Dynamically Userform Example</a></td>
+    <td><a href="Examples/DynamicForm-TransformObject">Dynamically Userform Example</a></td>
     <td>Library</td>
     <td>Build a userform dynamically to make changes to an input object.</td>
     <td>User,Interface,UI</td>
@@ -46,7 +46,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/JSON Viewer">JSON Viewer</a></td> 
+    <td><a href="Examples/JSON Viewer">JSON Viewer</a></td> 
     <td>DevTool</td>
     <td>Inspect JSON data in a userform.</td>
     <td>json, viewer, browser</td>
@@ -54,7 +54,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/MacroDispatcher">Macro Dispatcher</a></td>
+    <td><a href="Examples/MacroDispatcher">Macro Dispatcher</a></td>
     <td>DevTool / AdminTool</td>
     <td>Define exactly which macros should be run in which particular order across multiple spreadsheets. Monitors success and errors.</td>
     <td>macro, scheduler, dispatcher, bulk, automation, data, process</td>
@@ -62,7 +62,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr> 
   <tr>
-    <td><a href="tree/main/examples/Notepad-GetAllTextAndClose">Notepad GetAllTextAndClose Utility</a></td>
+    <td><a href="Examples/Notepad-GetAllTextAndClose">Notepad GetAllTextAndClose Utility</a></td>
     <td>Utility</td>
     <td>Get all text from all open Notepad tabs and close them. Useful when you use Notepad for note taking.</td>
     <td>notepad, utility, automation, data, extract</td>
@@ -70,7 +70,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/Registry Viewer">A registry viewer for VBA</a></td>
+    <td><a href="Examples/Registry Viewer">A registry viewer for VBA</a></td>
     <td>DevTool</td>
     <td>Inspect information in the registry without the need for regedit access.</td>
     <td>registry, win32, viewer, browser</td>
@@ -78,7 +78,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>WIP</td>
   </tr> 
   <tr>
-    <td><a href="tree/main/examples/SplitSideBySide">Split windows side by side</a></td>
+    <td><a href="Examples/SplitSideBySide">Split windows side by side</a></td>
     <td>Productivity Utility</td>
     <td>Split your excel window in half for increased productivity.</td>
     <td>window, automation</td>
@@ -86,7 +86,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr> 
   <tr>
-    <td><a href="tree/main/examples/Spreadsheet Extractor">Bulk Spreadsheet Extractor</a></td>
+    <td><a href="Examples/Spreadsheet Extractor">Bulk Spreadsheet Extractor</a></td>
     <td>Data Utility</td>
     <td>Extract information from multiple structured Excel documents to a table. Includes version differentiation.</td>
     <td>data, extract, bulk</td>
@@ -94,7 +94,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr> 
   <tr>
-    <td><a href="tree/main/examples/stdTable">Further SQL-like table operations and class for handling all things table powered by stdEnumerator</a></td>
+    <td><a href="Examples/stdTable">Further SQL-like table operations and class for handling all things table powered by stdEnumerator</a></td>
     <td>Library</td>
     <td>A sql-like system for handling Excel ListObjects.</td>
     <td>sql, listobject, table, update, select, database</td>
@@ -102,7 +102,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/Timer">Timer</a></td>
+    <td><a href="Examples/Timer">Timer</a></td>
     <td>Library</td>
     <td>Call code at set intervals.</td>
     <td>timer, time, stopwatch, watch, poll</td>
@@ -110,7 +110,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr> 
   <tr>
-    <td><a href="tree/main/examples/uiTextBoxEx-WordControl">Embed Microsoft Word into a userform</a></td>
+    <td><a href="Examples/uiTextBoxEx-WordControl">Embed Microsoft Word into a userform</a></td>
     <td>UI Control</td>
     <td>Present text to users as a Microsoft Word control.</td>
     <td>ui, window, automation, embedding</td>
@@ -118,7 +118,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr> 
   <tr>
-    <td><a href="tree/main/examples/xlVBA/xlApplication">Excel Application helper</a></td>
+    <td><a href="Examples/xlVBA/xlApplication">Excel Application helper</a></td>
     <td>Library</td>
     <td>Make getting the Application object easier, and extend it with additional methods.</td>
     <td>application, ebmode, edit, mode, LPenHelper</td>
@@ -126,7 +126,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>WIP</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/xlVBA/xlSaveHandler">Excel custom save handler</a></td>
+    <td><a href="Examples/xlVBA/xlSaveHandler">Excel custom save handler</a></td>
     <td>Library</td>
     <td>Custom Excel save handler with more events.</td>
     <td>save, handler, custom, events</td>
@@ -134,7 +134,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="tree/main/examples/xlVBA/xlTableTools">Excel sql-like table operations</a></td>
+    <td><a href="Examples/xlVBA/xlTableTools">Excel sql-like table operations</a></td>
     <td>Library</td>
     <td>A sql-like system for handling Excel ListObjects.</td>
     <td>sql, listobject, table, update, select, database</td>
@@ -145,7 +145,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
 
   <!-- 
   <tr>
-    <td><a href="tree/main/examples/">xxx</a></td>
+    <td><a href="Examples/">xxx</a></td>
     <td>xxx</td>
     <td>xxx</td>
   </tr> 
