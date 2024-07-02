@@ -76,7 +76,7 @@ Private Type TThis
   SelectedElement As tvAcc
   ProcWatch As TWatch
   ProcWatch5 As TWatch5
-  
+  HighlightRect As stdWindow
 End Type
 Private This As TThis
 
@@ -97,6 +97,16 @@ Private Sub tree_OnSelected(obj As Object)
   'Set selected item
   Set This.SelectedElement = obj
   Call This.props.UpdateSelection(obj)
+  
+  If TypeOf obj Is tvAcc Then
+    Dim t As tvAcc: Set t = obj
+    If btnHighlightRectangles.SpecialEffect = fmSpecialEffectSunken Then
+      Dim loc: Set loc = t.Location
+      Set This.HighlightRect = stdWindow.CreateHighlightRect(loc("left"), loc("top"), loc("width"), loc("height"), 10, RGB(255, 255, 0))
+      DoEvents
+    End If
+  End If
+  
 End Sub
 
 Private Sub btnSearch_Click()
@@ -118,10 +128,10 @@ End Sub
 
 Private Sub UserForm_Initialize()
   With This.init
-    .AllTop = TreeControl.Top
-    .TreeControlLeft = TreeControl.Left
+    .AllTop = TreeControl.top
+    .TreeControlLeft = TreeControl.left
     .TreeControlWidth = TreeControl.width
-    .FieldsLeft = PropertyFrame.Left
+    .FieldsLeft = PropertyFrame.left
     .FieldsWidth = PropertyFrame.width
     
     Dim FormWidth As Double: FormWidth = Me.width
@@ -216,6 +226,8 @@ Public Function accFilter(ByVal acc As tvAcc) As Boolean
 End Function
 Public Function getApplicationPath(ByVal acc As tvAcc) As String
   With stdWindow.CreateFromHwnd(acc.hwnd)
+    If Not .Exists Then Exit Function
+    Dim pid As Long: pid = .ProcessID
     With stdProcess.CreateFromProcessId(.ProcessID)
       getApplicationPath = .path
     End With
@@ -232,7 +244,7 @@ Public Function getWindowClass(ByVal acc As tvAcc) As String
 End Function
 Public Function getElementLocation(ByVal acc As tvAcc) As String
   If acc.Location Is Nothing Then Exit Function
-  getElementLocation = "X: " & acc.Location!Left & " Y: " & acc.Location!Top & " W: " & acc.Location!width & " H: " & acc.Location!height
+  getElementLocation = "X: " & acc.Location!left & " Y: " & acc.Location!top & " W: " & acc.Location!width & " H: " & acc.Location!height
 End Function
 Public Sub ElementSetValue(ByVal acc As tvAcc)
   acc.value = InputBox("Enter the value to input")
@@ -289,7 +301,7 @@ Private Sub FollowMouse()
   Wend
 End Sub
 
-Private Function getSelector(acc As stdAcc, Optional depth As Long = 0) As String
+Private Function getSelector(acc As tvAcc, Optional depth As Long = 0) As String
   Dim command As String
   If depth = 0 Or (x) Then
     If acc.name <> "" Then
@@ -376,13 +388,18 @@ End Sub
 Private Sub btnHighlightRectangles_Click(): Call toggleButtonState(btnHighlightRectangles): End Sub
 Private Sub btnVisibleOnly_Click(): Call toggleButtonState(btnVisibleOnly): End Sub
 
+Private Sub UserForm_QueryClose(Cancel As Integer, CloseMode As Integer)
+  'Explicitely set to nothing, required else crash will occur
+  Set This.HighlightRect = Nothing
+End Sub
+
 Private Sub UserForm_Resize()
   Dim width As Double: width = Me.width
   Dim height As Double: height = Me.height
-  TreeControl.Left = This.init.pcTCLeft * width
+  TreeControl.left = This.init.pcTCLeft * width
   TreeControl.width = This.init.pcTCWidth * width
   TreeControl.height = This.init.pcAllHeight * height
-  This.props.Left = This.init.pcFdLeft * width
+  This.props.left = This.init.pcFdLeft * width
   This.props.width = This.init.pcFdWidth * width
   This.props.height = This.init.pcAllHeight * height
 End Sub
