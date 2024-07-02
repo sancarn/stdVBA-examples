@@ -17,8 +17,16 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="Examples/Accessibility%20Inspector">Accessibility Inspector</a></td>
     <td>DevTool</td>
     <td>Inspect the accessibility information of controls UI controls. Critical for UI automation.</td>
-    <td>ui, window, automation, embedding</td>
+    <td>ui, window, automation, embedding,simple</td>
     <td>stdAcc, stdProcess, stdWindow, stdICallable</td>
+    <td>Deprecated</td>
+  </tr>
+  <tr>
+    <td><a href="Examples/Accessibility%20Inspector%20v2">Accessibility Inspector v2</a></td>
+    <td>DevTool</td>
+    <td>Inspect the accessibility tree of windows. Critical for UI automation.</td>
+    <td>ui, window, automation, embedding,advanced</td>
+    <td>stdAcc,stdCallback,stdClipboard,stdICallable,stdImage,stdLambda,stdProcess,stdShell,stdWindow</td>
     <td>Complete/WIP</td>
   </tr>
   <tr>
@@ -33,7 +41,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="Examples/Document Generator">Create documents based on tabular data</a></td> 
     <td>Data Utility</td>
     <td>Build a userform dynamically to make changes to an input object.</td>
-    <td>automation, data, document, generator, library, table</td>
+    <td>automation, data, document, generator, library, table,advanced</td>
     <td>stdCallback, stdCOM, stdEnumerator, stdICallable, stdLambda, stdRegex, stdTable, stdWindow</td>
     <td>Complete</td>
   </tr>
@@ -49,7 +57,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="Examples/JSON Viewer">JSON Viewer</a></td> 
     <td>DevTool</td>
     <td>Inspect JSON data in a userform.</td>
-    <td>json, viewer, browser</td>
+    <td>json, viewer, browser,advanced</td>
     <td>stdCallback, stdICallable, stdJSON, stdLambda, tvTree</td>
     <td>Complete</td>
   </tr>
@@ -57,7 +65,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="Examples/MacroDispatcher">Macro Dispatcher</a></td>
     <td>DevTool / AdminTool</td>
     <td>Define exactly which macros should be run in which particular order across multiple spreadsheets. Monitors success and errors.</td>
-    <td>macro, scheduler, dispatcher, bulk, automation, data, process</td>
+    <td>macro, scheduler, dispatcher, bulk, automation, data, process,advanced</td>
     <td>stdAcc, stdCallback, stdEnumerator, stdICallable, stdLambda, stdPerformance, stdReg, stdWindow</td>
     <td>Complete</td>
   </tr> 
@@ -73,7 +81,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td><a href="Examples/Registry Viewer">A registry viewer for VBA</a></td>
     <td>DevTool</td>
     <td>Inspect information in the registry without the need for regedit access.</td>
-    <td>registry, win32, viewer, browser</td>
+    <td>registry, win32, viewer, browser,advanced</td>
     <td>stdClipboard, stdIcallable, stdLambda, stdReg</td>
     <td>WIP</td>
   </tr> 
