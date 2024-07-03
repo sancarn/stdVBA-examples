@@ -247,7 +247,9 @@ Public Function getElementLocation(ByVal acc As tvAcc) As String
   getElementLocation = "X: " & acc.Location!left & " Y: " & acc.Location!top & " W: " & acc.Location!width & " H: " & acc.Location!height
 End Function
 Public Sub ElementSetValue(ByVal acc As tvAcc)
+  Me.Hide
   acc.value = InputBox("Enter the value to input")
+  Me.Show
 End Sub
 
 Private Sub FollowMouse()
