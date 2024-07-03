@@ -50,9 +50,5 @@ Navigate the treeview to insect the accessibility information of desktop windows
 * [X] Code generation algorithm to generate stdAcc code for usage in user applications.
 * [X] Search function to allow searching of accessibility tree.
 * [X] Ability to only show visible elements.
-* [ ] Option to highlighting the selected accessibility element with a yellow rect.
+* [X] Option to highlighting the selected accessibility element with a yellow rect.
 * [ ] Option to find and display the hovered element within the accessibility tree.
-
-## Known issues
-
-* Currently the highlight rectangle button is not working.
