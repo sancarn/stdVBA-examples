@@ -203,23 +203,15 @@ Public Function accFilter(ByVal acc As tvAcc) As Boolean
     If btnVisibleOnly.SpecialEffect = fmSpecialEffectSunken Then
       If (.StateData And STATE_INVISIBLE) = STATE_INVISIBLE Then Exit Function
     End If
-    Select Case CLng(.hwnd)
-      Case 66590, 66592: Exit Function
-    End Select
+    
     With stdWindow.CreateFromHwnd(.hwnd)
-      
       If Not .Exists Then Exit Function
-      If Not .Visible Then Exit Function
       With stdProcess.CreateFromProcessId(.ProcessID)
         If .name Like "CodeSetup-stable-*.tmp" Then
-          Debug.Print acc.Role
-          Debug.Print .name
-          Debug.Print .path
           Exit Function
         End If
       End With
     End With
-    'If .Identity = "Unknown" Then Exit Function
   End With
   
   accFilter = True                              'Show element
@@ -259,21 +251,6 @@ Private Sub FollowMouse()
     
     'Trigger Follow mouse operations
     If btnFollowMouse.SpecialEffect = fmSpecialEffectSunken Then
-'      Dim tMAcc As stdAcc: Set tMAcc = stdAcc.CreateFromMouse()
-'      If This.ProcWatch.OldControl Is Nothing Then
-'        Set This.ProcWatch.OldControl = tMAcc
-'        This.ProcWatch.DateStarted = Now()
-'      Else
-'        If This.ProcWatch.OldControl.Identity <> tMAcc.Identity Then
-'          Set This.ProcWatch.OldControl = tMAcc
-'          This.ProcWatch.DateStarted = Now()
-'        End If
-'      End If
-'
-'      'If more than 2s has expired, set current control
-'      If DateDiff("s", This.ProcWatch.DateStarted, Now()) >= 2 Then
-'        Call tree_OnSelected(This.ProcWatch.OldControl)
-'      End If
       Call tree_OnSelected(tvAcc.CreateFromMouse())
     End If
     
@@ -296,9 +273,6 @@ Private Sub FollowMouse()
         This.ProcWatch5.secDiff = tM5SecDiff
         Me.Caption = "Accessibility Inspector - Countdown: " & (5 - tM5SecDiff)
       End If
-      
-        
-      
     End If
   Wend
 End Sub
