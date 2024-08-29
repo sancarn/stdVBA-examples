@@ -31,6 +31,8 @@ Public Sub Terminate()
   DoEvents
 End Sub
 
+'Obtain the text provided in the word control.
+'@returns {String} The text in the word control, note this text is unformatted
 Public Property Get Text() As String
   Text = pAppWordDoc.Content.Text
 End Property
