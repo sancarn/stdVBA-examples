@@ -14,7 +14,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <th>Status</th>
   </tr>
   <tr>
-    <td><a href="Examples/Accessibility%20Inspector">Accessibility Inspector</a></td>
+    <td><a href="Examples/Inspector-Accessibility-v1">Accessibility Inspector</a></td>
     <td>DevTool</td>
     <td>Inspect the accessibility information of controls UI controls. Critical for UI automation.</td>
     <td>ui, window, automation, embedding,simple</td>
@@ -22,7 +22,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Deprecated</td>
   </tr>
   <tr>
-    <td><a href="Examples/Accessibility%20Inspector%20v2">Accessibility Inspector v2</a></td>
+    <td><a href="Examples/Inspector-Accessibility-v2">Accessibility Inspector v2</a></td>
     <td>DevTool</td>
     <td>Inspect the accessibility tree of windows. Critical for UI automation.</td>
     <td>ui, window, automation, embedding,advanced</td>
@@ -54,7 +54,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="Examples/JSON Viewer">JSON Viewer</a></td> 
+    <td><a href="Examples/Inspector-JSON">JSON Viewer</a></td> 
     <td>DevTool</td>
     <td>Inspect JSON data in a userform.</td>
     <td>json, viewer, browser,advanced</td>
@@ -78,7 +78,7 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="Examples/Registry Viewer">A registry viewer for VBA</a></td>
+    <td><a href="Examples/Inspector-Registry">A registry viewer for VBA</a></td>
     <td>DevTool</td>
     <td>Inspect information in the registry without the need for regedit access.</td>
     <td>registry, win32, viewer, browser,advanced</td>
