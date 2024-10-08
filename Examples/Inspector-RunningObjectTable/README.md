@@ -16,3 +16,5 @@ A **ROT Viewer** is a diagnostic tool that allows developers and system administ
 Understanding how the ROT works and being able to inspect it is essential for developers working with COM technologies, especially when dealing with complex applications that require robust inter-process communication.
 
 Additionally this example serves as a demonstration of how to use `stdCOM.CreateFromActiveObjects()`, a method which returns a `Collection` of objects containing moniker details.
+
+![_](docs/inspector-rot.png)

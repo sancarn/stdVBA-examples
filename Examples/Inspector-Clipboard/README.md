@@ -13,9 +13,15 @@ For those already familiar with the clipboard's basic functionality, a Clipboard
 
 By providing visibility into the clipboard's inner workings, the Clipboard Inspector empower users to have greater control and knowledge over what data is stored in the clipboard and how it works.
 
+![_](docs/clipboard-inspector.png)
+
+![_](docs/clipboard-inspector-imageView.png)
+
 ## TODO List
 
 - [X] Clipboard Monitoring
 - [X] Show all formats available on clipboard
 - [X] Show images copied to clipboard as images in the viewer
 - [ ] Clipboard History
+
+
