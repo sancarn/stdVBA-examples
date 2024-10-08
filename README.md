@@ -30,6 +30,38 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete/WIP</td>
   </tr>
   <tr>
+    <td><a href="Examples/Inspector-JSON">JSON Viewer</a></td> 
+    <td>DevTool</td>
+    <td>Inspect JSON data in a userform.</td>
+    <td>json, viewer, browser,advanced</td>
+    <td>stdCallback, stdICallable, stdJSON, stdLambda, tvTree</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td><a href="Examples/Inspector-Registry">A registry viewer for VBA</a></td>
+    <td>DevTool</td>
+    <td>Inspect information in the registry without the need for regedit access.</td>
+    <td>registry, win32, viewer, browser,advanced</td>
+    <td>stdClipboard, stdIcallable, stdLambda, stdReg</td>
+    <td>Complete</td>
+  </tr> 
+  <tr>
+    <td><a href="Examples/Inspector-Clipboard">Clipboard Inspector</a></td>
+    <td>DevTool</td>
+    <td>Inspect information in the system-wide clipboard.</td>
+    <td>clipboard, text, image, binary</td>
+    <td>stdClipboard</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
+    <td><a href="Examples/Inspector-RunningObjectTable">Running Object Table Inspector</a></td>
+    <td>DevTool</td>
+    <td>Inspect information in the system-wide Running Object Table.</td>
+    <td>component, object, model, COM, running, object, table, ROT</td>
+    <td>stdCOM</td>
+    <td>Complete</td>
+  </tr>
+  <tr>
     <td><a href="Examples/BrowserAutomation">Automate the web with Chrome</a></td>
     <td>Library</td>
     <td>Automate major browsers for web scraping or UI presentation.</td>
@@ -54,14 +86,6 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>Complete</td>
   </tr>
   <tr>
-    <td><a href="Examples/Inspector-JSON">JSON Viewer</a></td> 
-    <td>DevTool</td>
-    <td>Inspect JSON data in a userform.</td>
-    <td>json, viewer, browser,advanced</td>
-    <td>stdCallback, stdICallable, stdJSON, stdLambda, tvTree</td>
-    <td>Complete</td>
-  </tr>
-  <tr>
     <td><a href="Examples/MacroDispatcher">Macro Dispatcher</a></td>
     <td>DevTool / AdminTool</td>
     <td>Define exactly which macros should be run in which particular order across multiple spreadsheets. Monitors success and errors.</td>
@@ -77,14 +101,6 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>stdAcc, stdICallable, stdLambda, stdProcess, stdWindow</td>
     <td>Complete</td>
   </tr>
-  <tr>
-    <td><a href="Examples/Inspector-Registry">A registry viewer for VBA</a></td>
-    <td>DevTool</td>
-    <td>Inspect information in the registry without the need for regedit access.</td>
-    <td>registry, win32, viewer, browser,advanced</td>
-    <td>stdClipboard, stdIcallable, stdLambda, stdReg</td>
-    <td>WIP</td>
-  </tr> 
   <tr>
     <td><a href="Examples/SplitSideBySide">Split windows side by side</a></td>
     <td>Productivity Utility</td>
@@ -149,7 +165,6 @@ This repository holds examples of using `stdVBA`. This should give people a bett
     <td>stdICallable</td>
     <td>Complete</td>
   </tr>
-
 
   <!-- 
   <tr>
