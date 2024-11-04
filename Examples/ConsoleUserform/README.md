@@ -4,12 +4,8 @@ A custom userform-based console for usage in VBA projects. Developed by @Almesi 
 
 ## WIP
 
-This example is still under construction, and currently is not reliable enough.
+This example is still needs lots of testing. I (Almesi) encourage everyone to help with testing.
 
 ## Roadmap
 
-- [ ] Migrate evaluation code to use `stdLambda`
-- [ ] Ensure functions need to be registered by default
-- [ ] Ability to use colored text
 - [ ] Use `stdUIElement`
-- [ ] Intellisense / Auto-Complete
