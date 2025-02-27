@@ -42,6 +42,8 @@ Public Sub protCreateRow(ByVal row As Object, ByVal index As Long)
         cb.List = Split(row("dropdown-choices"), ";")
       Case "Checkbox"
         Set element = stdUIElement.CreateFromType(Frame1.Controls, uiCheckBox, fLeft:=100, fTop:=(index - 1) * 15)
+      Case "Freetext"
+        Set element = stdUIElement.CreateFromType(Frame1.Controls, uiTextBox, fLeft:=100, fTop:=(index - 1) * 15)
     End Select
     Set .Item("input") = element
   End With
@@ -52,7 +54,7 @@ Public Function protReduceRow(ByVal text As String, ByVal row As Object, ByVal i
   Dim finder As String: finder = "{" & row("TemplateName") & "}"
   Dim replacer As String
   Select Case row("Type")
-    Case "Dropdown"
+    Case "Dropdown", "Freetext"
       replacer = row("ui")("input").Value
     Case "Checkbox"
       If row("ui")("input").Value Then
