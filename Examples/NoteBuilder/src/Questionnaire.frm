@@ -43,7 +43,7 @@ Public Sub protCreateRow(ByVal row As Object, ByVal index As Long)
       Case "Checkbox"
         Set element = stdUIElement.CreateFromType(Frame1.Controls, uiCheckBox, fLeft:=100, fTop:=(index - 1) * 15)
       Case "Freetext"
-        Set element = stdUIElement.CreateFromType(Frame1.Controls, uiTextBox, fLeft:=100, fTop:=(index - 1) * 15)
+        Set element = stdUIElement.CreateFromType(Frame1.Controls, uiTextBox, fLeft:=100, fTop:=(index - 1) * 15, fWidth:=100)
     End Select
     Set .Item("input") = element
   End With
