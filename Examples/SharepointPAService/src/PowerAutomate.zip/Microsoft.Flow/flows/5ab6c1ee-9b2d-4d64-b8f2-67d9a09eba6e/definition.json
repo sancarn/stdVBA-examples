@@ -20,8 +20,8 @@
         },
         "provisioningMethod": "FromDefinition",
         "failureAlertSubscription": true,
-        "clientLastModifiedTime": "2025-04-14T14:47:25.3615433Z",
-        "connectionKeySavedTimeKey": "2025-04-14T14:47:25.3615433Z",
+        "clientLastModifiedTime": "2025-04-14T15:05:52.9191335Z",
+        "connectionKeySavedTimeKey": "2025-04-14T15:05:52.9191335Z",
         "creationSource": "Portal",
         "modifiedSources": "Portal"
       },
@@ -82,7 +82,7 @@
           "kind": "Http",
           "inputs": {
             "statusCode": 200,
-            "body": "@{triggerOutputs()?['headers']}\n\n@{triggerOutputs()?['relativePathParameters']}\n\n@{triggerOutputs()?['queries']}\n\n@{triggerBody()}"
+            "body": "@{body('Send_an_HTTP_request_to_SharePoint')}\n"
           }
         },
         "Fail_Response": {
@@ -93,7 +93,7 @@
           "kind": "Http",
           "inputs": {
             "statusCode": 400,
-            "body": "@{triggerBody()}\n\n@{triggerOutputs()?['headers']}\n\n@{triggerOutputs()?['relativePathParameters']}\n\n@{triggerOutputs()?['queries']}"
+            "body": "@body('Send_an_HTTP_request_to_SharePoint')"
           }
         }
       },

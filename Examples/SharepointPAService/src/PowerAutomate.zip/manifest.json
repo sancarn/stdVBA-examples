@@ -3,15 +3,15 @@
   "details": {
     "displayName": "SharepointService",
     "description": "",
-    "createdTime": "2025-04-14T14:49:21.4041429Z",
-    "packageTelemetryId": "e2405275-7a24-48fb-bde0-5e88397276eb",
+    "createdTime": "2025-04-14T15:06:18.6465183Z",
+    "packageTelemetryId": "c8f10a9a-3ca3-4255-b433-785aa0e747c6",
     "creator": "N/A",
     "sourceEnvironment": ""
   },
   "resources": {
     "5ab6c1ee-9b2d-4d64-b8f2-67d9a09eba6e": {
       "type": "Microsoft.Flow/flows",
-      "suggestedCreationType": "New",
+      "suggestedCreationType": "Update",
       "creationType": "Existing, New, Update",
       "details": { "displayName": "SharepointService" },
       "configurableBy": "User",
