@@ -1,0 +1,103 @@
+{
+  "name": "f0f4bd78-cf2e-4cb8-a920-c8c2f8e14ffb",
+  "id": "/providers/Microsoft.Flow/flows/f0f4bd78-cf2e-4cb8-a920-c8c2f8e14ffb",
+  "type": "Microsoft.Flow/flows",
+  "properties": {
+    "apiId": "/providers/Microsoft.PowerApps/apis/shared_logicflows",
+    "displayName": "SharepointService",
+    "definition": {
+      "metadata": {
+        "workflowEntityId": null,
+        "processAdvisorMetadata": null,
+        "flowChargedByPaygo": null,
+        "flowclientsuspensionreason": "None",
+        "flowclientsuspensiontime": null,
+        "flowclientsuspensionreasondetails": null,
+        "creator": {
+          "id": "1901316b-9f95-4073-972c-a557b420a84c",
+          "type": "User",
+          "tenantId": "e15c1e99-7be3-495c-978e-eca7b8ea9f31"
+        },
+        "provisioningMethod": "FromDefinition",
+        "failureAlertSubscription": true,
+        "clientLastModifiedTime": "2025-04-13T10:27:40.07224Z",
+        "connectionKeySavedTimeKey": "2025-04-13T10:27:40.07224Z",
+        "creationSource": "Portal",
+        "modifiedSources": "Portal"
+      },
+      "$schema": "https://schema.management.azure.com/providers/Microsoft.Logic/schemas/2016-06-01/workflowdefinition.json#",
+      "contentVersion": "1.0.0.0",
+      "parameters": {
+        "$authentication": { "defaultValue": {}, "type": "SecureObject" },
+        "$connections": { "defaultValue": {}, "type": "Object" }
+      },
+      "triggers": {
+        "manual": {
+          "metadata": {},
+          "type": "Request",
+          "kind": "Http",
+          "inputs": { "triggerAuthenticationType": "All" }
+        }
+      },
+      "actions": {
+        "Parse_JSON": {
+          "runAfter": {},
+          "type": "ParseJson",
+          "inputs": {
+            "content": "@triggerBody()",
+            "schema": {
+              "type": "object",
+              "properties": {
+                "site": { "type": "string" },
+                "api": { "type": "string" },
+                "method": { "type": "string" },
+                "headers": { "type": "object" },
+                "body": { "type": "string" }
+              }
+            }
+          }
+        },
+        "Send_an_HTTP_request_to_SharePoint": {
+          "runAfter": { "Parse_JSON": ["Succeeded"] },
+          "type": "OpenApiConnection",
+          "inputs": {
+            "parameters": {
+              "dataset": "@body('Parse_JSON')?['site']",
+              "parameters/method": "@body('Parse_JSON')?['method']",
+              "parameters/uri": "@body('Parse_JSON')?['api']",
+              "parameters/headers": "@body('Parse_JSON')?['headers']",
+              "parameters/body": "@body('Parse_JSON')?['body']"
+            },
+            "host": {
+              "apiId": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+              "connectionName": "shared_sharepointonline",
+              "operationId": "HttpRequest"
+            },
+            "authentication": "@parameters('$authentication')"
+          }
+        },
+        "Response": {
+          "runAfter": { "Send_an_HTTP_request_to_SharePoint": ["Succeeded"] },
+          "type": "Response",
+          "kind": "Http",
+          "inputs": {
+            "statusCode": 200,
+            "body": "@{triggerOutputs()?['headers']}\n\n@{triggerOutputs()?['relativePathParameters']}\n\n@{triggerOutputs()?['queries']}\n\n@{triggerBody()}"
+          }
+        }
+      },
+      "outputs": {}
+    },
+    "connectionReferences": {
+      "shared_sharepointonline": {
+        "connectionName": "shared-sharepointonl-b1c92c37-ec3f-4e64-807f-2f15fe684613",
+        "source": "Embedded",
+        "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+        "tier": "NotSpecified",
+        "apiName": "sharepointonline"
+      }
+    },
+    "flowFailureAlertSubscribed": false,
+    "isManaged": false
+  }
+}

@@ -1,0 +1,50 @@
+{
+  "schema": "1.0",
+  "details": {
+    "displayName": "SharepointService",
+    "description": "",
+    "createdTime": "2025-04-13T11:48:44.4582116Z",
+    "packageTelemetryId": "7ca14b53-d719-4e16-a109-1df650e4041b",
+    "creator": "N/A",
+    "sourceEnvironment": ""
+  },
+  "resources": {
+    "5ab6c1ee-9b2d-4d64-b8f2-67d9a09eba6e": {
+      "type": "Microsoft.Flow/flows",
+      "suggestedCreationType": "Update",
+      "creationType": "Existing, New, Update",
+      "details": { "displayName": "SharepointService" },
+      "configurableBy": "User",
+      "hierarchy": "Root",
+      "dependsOn": [
+        "94038e56-d034-47f6-9700-150939a7c1e1",
+        "0167ec3c-d2a9-48b9-9bc5-c4cf521e8cde"
+      ]
+    },
+    "94038e56-d034-47f6-9700-150939a7c1e1": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_sharepointonline",
+      "name": "shared_sharepointonline",
+      "type": "Microsoft.PowerApps/apis",
+      "suggestedCreationType": "Existing",
+      "details": {
+        "displayName": "SharePoint",
+        "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/releases/v1.0.1738/1.0.1738.4131/sharepointonline/icon.png"
+      },
+      "configurableBy": "System",
+      "hierarchy": "Child",
+      "dependsOn": []
+    },
+    "0167ec3c-d2a9-48b9-9bc5-c4cf521e8cde": {
+      "type": "Microsoft.PowerApps/apis/connections",
+      "suggestedCreationType": "Existing",
+      "creationType": "Existing",
+      "details": {
+        "displayName": "James-PR.Warren@severntrent.co.uk",
+        "iconUri": "https://conn-afd-prod-endpoint-bmc9bqahasf3grgk.b01.azurefd.net/releases/v1.0.1738/1.0.1738.4131/sharepointonline/icon.png"
+      },
+      "configurableBy": "User",
+      "hierarchy": "Child",
+      "dependsOn": ["94038e56-d034-47f6-9700-150939a7c1e1"]
+    }
+  }
+}
