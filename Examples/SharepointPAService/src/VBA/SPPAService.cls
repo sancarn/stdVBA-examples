@@ -300,9 +300,15 @@ End Function
 
 
 
-
-
-
+'Get a GUID, used in $batch queries
+'@returns - A new GUID
+Private Function getGUID() As String
+  getGUID = "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx"
+  getGUID = Replace(getGUID, "y", Hex(Rnd() And &H3 Or &H8))
+  Dim i As Long: For i = 1 To 30
+    getGUID = Replace(getGUID, "x", Hex$(CLng(Rnd() * 15.9999)), 1, 1)
+  Next
+End Function
 
 'Interpolate a string
 '@param input - template string
