@@ -331,6 +331,8 @@ Public Property Get isFinished() As Boolean
   end if
   Exit Property
 Skip:
+  If Err.Description like "The data necessary to complete this operation is not yet available*" then Exit Property
+  
   Debug.Print "Error in stdHTTP#isFinished: '" & err.Description & "'"
 End Property
 
@@ -389,8 +391,9 @@ End Property
 
 'Get the mapped response
 Public Property Get ResponseMapped() as variant
-  if ResponseMapper is nothing then Err.Raise 1, "", "No response mapper provided"
-  set ResponseMapped = ResponseMapper.Run(Me)
+  if This.ResponseMapper is nothing then Err.Raise 1, "", "No response mapper provided"
+  Dim oMe as object: set oMe = Me
+  Call CopyVariant(ResponseMapped, This.ResponseMapper.Run(oMe))
 End Property
 
 'Get/Set the response mapper. This callback will run when ResponeMapped() is called. This would usually be used to convert the response to a JSON/XML VBA object.
@@ -666,3 +669,14 @@ Cleanup:
     If .lpszProxyBypass <> 0 Then Call GlobalFree(.lpszProxyBypass)
   End With
 End Function
+
+'Copies a variant from the source variable to the dest variable
+'@param dest - Destination to copy variant to
+'@param src - Source to copy variant from
+Private Sub CopyVariant(ByRef dest as variant, ByVal src as variant)
+  If isObject(src) then
+    set dest = src
+  else
+    let dest = src
+  end if
+End Sub
