@@ -424,9 +424,12 @@ Public Function ListItemsCreateBatch(ByVal additions As stdArray, Optional ByVal
 End Function
 
 'Uses $batch query to update many items in a sharepoint list in as few requests as possible
+'@param changes - Changes in the form `{id: ..., data: {field1: ..., ...}}`
+'@param changeSetID - an id for each sub-request
+'@param batchUUID - an id for the whole request
 '@docs https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/make-batch-requests-with-the-rest-apis
 Public Function ListItemsUpdateBatch(ByVal changes As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As stdArray
-  Dim itemType As String: itemType = getListItemType()
+  Dim itemType As String: itemType = getListItemType().Await().ResponseMapped()
   If changeSetID = "" Then changeSetID = getGUID()
   If batchUUID = "" Then batchUUID = getGUID()
   Dim responses As stdArray: Set responses = stdArray.Create()
@@ -434,7 +437,7 @@ Public Function ListItemsUpdateBatch(ByVal changes As stdArray, Optional ByVal c
   'A max of 1000 operations are allowed in a changeset; To stay well under this value, we use batches of 750.
   For Each changeSet In changes.SplitToChunks(750)
     'Workaround for issue described @ https://learn.microsoft.com/en-us/answers/questions/1383519/error-while-trying-to-bulk-update-sharepoint-onlin
-    Call changeSet.Push(data.item(1))
+    Call changeSet.Push(changeSet.item(1))
 
     'Create changeset
     Dim batch As stdArray: Set batch = stdArray.Create()
@@ -447,10 +450,10 @@ Public Function ListItemsUpdateBatch(ByVal changes As stdArray, Optional ByVal c
 
     'Each item of the form: {id: number, data: {... updates ...}}
     Dim item As stdJSON
-    For Each item In changeSet.arr
+    For Each item In changeSet
       'Bind metadata
       With item("data")
-        Call .Add("__metadata", metadata)
+        if not .exists("__metadata") then Call .Add("__metadata", metadata)
       End With
 
       'Add change
@@ -458,7 +461,7 @@ Public Function ListItemsUpdateBatch(ByVal changes As stdArray, Optional ByVal c
       Call batch.Push("Content-Type:application/http")
       Call batch.Push("Content-Transfer-Encoding: binary")
       Call batch.Push("")
-      Call batch.Push(InterpolateString("PATCH /${list}/items(${itemID}) HTTP/1.1", "list", This.listAPI, "itemID", item("id")))
+      Call batch.Push(InterpolateString("PATCH ${site}/${list}/items(${itemID}) HTTP/1.1", "site", this.siteURL, "list", This.listAPI, "itemID", item("id")))
       Call batch.Push("Content-Type: application/json;odata=verbose;")
       Call batch.Push("Accept: application/json")
       Call batch.Push("If-Match: *")
@@ -484,8 +487,49 @@ End Function
 
 'Uses $batch query to delete many items in a sharepoint list in as few requests as possible
 '@docs https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/make-batch-requests-with-the-rest-apis
-Public Function ListItemsDelete(ByVal deletionIDs As stdEnumerator, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As stdHTTP
-  'TODO:
+Public Function ListItemsDeleteBatch(ByVal deletionIDs As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As stdArray
+  If changeSetID = "" Then changeSetID = getGUID()
+  If batchUUID = "" Then batchUUID = getGUID()
+  Dim responses As stdArray: Set responses = stdArray.Create()
+
+  'A max of 1000 operations are allowed in a changeset; To stay well under this value, we use batches of 750.
+  For Each changeSet In deletionIDs.SplitToChunks(750)
+    'Workaround for issue described @ https://learn.microsoft.com/en-us/answers/questions/1383519/error-while-trying-to-bulk-update-sharepoint-onlin
+    Call changeSet.Push(changeSet.item(1))
+
+    'Create changeset
+    Dim batch As stdArray: Set batch = stdArray.Create()
+    Call batch.Push("--batch_" & batchUUID)
+    Call batch.Push("Content-Type: multipart/mixed; boundary=changeset_" & changeSetID)
+    Call batch.Push("")
+
+    'Each item of the form: {id: number, data: {... updates ...}}
+    Dim id
+    For Each id In changeSet
+      'Add change
+      Call batch.Push("--changeset_" & changeSetID)
+      Call batch.Push("Content-Type:application/http")
+      Call batch.Push("Content-Transfer-Encoding: binary")
+      Call batch.Push("")
+      Call batch.Push(InterpolateString("DELETE ${site}/${list}/items(${itemID}) HTTP/1.1", "site", this.siteURL, "list", This.listAPI, "itemID", id))
+      Call batch.Push("Accept: application/json;odata=verbose")
+      Call batch.Push("Content-Type: application/json;odata=verbose")
+      Call batch.Push("If-Match: *")
+      Call batch.Push("")
+    Next
+
+    'End changeset to create Data
+    Call batch.Push("--changeSetId_" & changeSetID & "--")
+    Dim body As String: body = batch.Join(vbCrLf)
+
+    'Make request via RawRequest
+    Dim headers As stdJSON: Set headers = stdJSON.CreateFromParams(eJSONObject, "Content-Type", "multipart/mixed; boundary=batch_" & batchUUID)
+    Dim request As stdHTTP: Set request = RawRequest("_api/$batch", "POST", headers, body)
+    Call responses.Push(request)
+  Next
+  
+  'TODO: Parse to better result set
+  Set ListItemsDeleteBatch = responses
 End Function
 
 '@devNote ```HTTP
