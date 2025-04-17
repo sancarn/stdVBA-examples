@@ -32,6 +32,48 @@ It is advised to save the service urls in **config files**, such that they are n
 
 ## Library usage
 
+### Create a `service` object
+
+When you are initially setting up a service it is suggested you create an object with the following:
+
+```vb
+Dim service as SPPAService: set service = SPPAService.Create( _
+  "https://prod-152.westeurope.logic.azure.com:443/workflows/.../triggers/manual/paths/invoke?...", _ 'From PowerAutomate service
+  "http://tenant.sharepoint.com/sites/Path/To/Site", _
+  "My List Name" _
+)
+```
+
+However do not leave this in your codebase. As suggested above, save this either to a combined config file, or to a seperate service and dataset config file:
+
+```vb
+'To combined config
+Call service.ToCombinedConfig("C:\Temp\Path_To_Site - My List Name.json")
+
+'Or to seperate configs for the service (worker) and list/document library
+Call service.ToWorkerConfig("C:\Temp\PAService.json")
+Call service.ToListLibConfig("C:\Temp\Path_To_Site - My List Name.json")
+```
+
+After this has been done, replace your service creation code with either of the 2 following snippets:
+
+```vb
+'From combined config
+Dim service as SPPAService: set service = SPPAService.CreateFromCombinedConfig( _
+  "C:\Temp\Path_To_Site - My List Name.json" _
+)
+
+'--- or ---
+
+'From Worker and ListLib configs
+Dim service as SPPAService: set service = SPPAService.CreateFromConfigs( _
+  "C:\Temp\PAService.json", _
+  "C:\Temp\Path_To_Site - My List Name.json" _
+)
+```
+
+This gives your vba workbook the highest security to prevent accidental distribution of the service worker.
+
 ### Create items in bulk
 
 ```vb

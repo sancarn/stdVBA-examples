@@ -32,7 +32,7 @@ Private This As TThis
 '@param listSelectorType - "title", "id" or "name" depending on how you are wanting to select the list in question.
 '@returns - Sharepoint PowerAutomate service worker.
 '@example `set service = SPPAService.Create("http://service.worker.com", "http://tenant.sharepoint.com/sites/My/Site", "My List")`
-Public Function Create(ByVal serviceWorker As String, ByVal SiteURL As String, listSelectorValue As String, Optional ByVal listSelectorType As String = "title") As SPPAService
+Public Function Create(ByVal serviceWorker As String, ByVal SiteURL As String, ByVal listSelectorValue As String, Optional ByVal listSelectorType As String = "title") As SPPAService
   Set Create = New SPPAService
   Call Create.protInit(serviceWorker, SiteURL, listSelectorValue, listSelectorType)
 End Function
