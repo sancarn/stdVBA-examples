@@ -18,7 +18,7 @@ Utilising these 2 technologies we can publish a URL to push/pull data to/from sh
 
 > ⚠️⚠️⚠️ DO NOT PUBLISH URLs publically/online without MAJOR RESTRICTIONS on the API usage! ⚠️⚠️⚠️
 >
-> Generic sharepoitn REST APIs like the one used in this demo should remain internal only, and other access controlls should be put in place to ensure unintended usage not possible.
+> Generic sharepoint REST APIs like the one used in this demo should remain internal only, and other access controlls should be put in place to ensure unintended usage not possible. These links can be eaily abused in the wrong hands.
 
 ## Setup
 

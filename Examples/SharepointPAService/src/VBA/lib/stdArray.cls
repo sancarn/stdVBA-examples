@@ -127,13 +127,11 @@ End Function
 '@param arr - Variant array to create a `stdArray` object from.
 '@returns stdArray<variant> - Returns `stdArray` of variants. 
 Public Function CreateFromArray(ByVal arr As Variant) As stdArray
-    Set CreateFromArray = New stdArray
-    
-    Dim i As Long
     Dim lb As Long: lb = LBound(arr)
     Dim ub As Long: ub = UBound(arr)
-    Call CreateFromArray.protInit(ub - lb + 1, 10)
+    Set CreateFromArray = CreateWithOptions(ub - lb + 1, 10)
     
+    Dim i As Long
     For i = lb To ub
         Call CreateFromArray.Push(arr(i))
     Next
@@ -141,6 +139,20 @@ Public Function CreateFromArray(ByVal arr As Variant) As stdArray
     'Raise AfterCreate event
     RaiseEvent AfterCreate(Create)
 End Function
+
+'Create a `stdArray` object from a collection
+'@param col - Collection to create a `stdArray` object from.
+'@returns stdArray<variant> - Returns `stdArray` of variants.
+Public Function CreateFromCollection(ByVal col as Collection) as stdArray
+  set CreateFromCollection = CreateWithOptions(col.count, 10)
+  Dim item: For each item in col
+    Call CreateFromCollection.Push(item)
+  next
+
+  'Raise AfterCreate event
+  RaiseEvent AfterCreate(Create)
+End Function
+
 
 'Create an array by splitting a string
 '@param sHaystack  - Haystack to split

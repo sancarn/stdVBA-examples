@@ -366,12 +366,16 @@ Public Function ListItemsFromInplaceQuery(ByVal query As String) As stdHTTP
 End Function
 
 'Uses $batch query to add many items to a sharepoint list in as few requests as possible
+'@param additions as stdArray<stdJSON>- Array of JSON objects in the form `{field1: ..., ...}`
+'@param changeSetID - Optional. If not supplied it will be generated at runtime.
+'@param batchUUID - Optional. If not supplied it will be generated at runtime.
+'@returns - Collection of the responses from the batch requests. Call `ResponseMapped()` to get the status and data of all requests.
 '@docs https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/make-batch-requests-with-the-rest-apis
-Public Function ListItemsCreateBatch(ByVal additions As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As stdArray
+Public Function ListItemsCreateBatch(ByVal additions As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As HTTPCollection
   Dim itemType As String: itemType = getListItemType().Await.ResponseMapped()
   If changeSetID = "" Then changeSetID = getGUID()
   If batchUUID = "" Then batchUUID = getGUID()
-  Dim responses As stdArray: Set responses = stdArray.Create()
+  Dim responses As HTTPCollection: Set responses = HTTPCollection.Create()
   
   'A max of 1000 operations are allowed in a changeset; To stay well under this value, we use batches of 750.
   For Each AddSet In additions.SplitToChunks(750)
@@ -416,23 +420,67 @@ Public Function ListItemsCreateBatch(ByVal additions As stdArray, Optional ByVal
     'Make request via RawRequest
     Dim headers As stdJSON: Set headers = stdJSON.CreateFromParams(eJSONObject, "Content-Type", "multipart/mixed; boundary=batch_" & batchUUID, "Accept", "application/json")
     Dim request As stdHTTP: Set request = RawRequest("_api/$batch", "POST", headers, body)
-    Call responses.Push(request)
+    Call responses.add(request)
   Next
 
-  'TODO: Parse to better result set
   Set ListItemsCreateBatch = responses
+  set ListItemsCreateBatch.responseMapper = stdCallback.CreateFromObjectMethod(Me, "protProcessBatchResponse").bind("addition", additions)
+End Function
+
+'Process the batch response from a batch request
+'@protected
+'@param typeOfRequest - "create", "update" or "delete" dependent on which request was made
+'@param initialData as stdArray<stdJSON> - The data that was sent in the request. This is used to map the response to the original request.
+'@param col as Collection<stdHTTP> - The collection of batch HTTP requests/responses to process
+'@returns stdArray<stdJSON> - A collection of responses from the batch request
+Public Function protProcessBatchResponse(ByVal typeOfRequest as string, ByVal initialData as stdArray, ByVal col as Collection) as stdArray
+  Dim regex as stdRegex: set regex = stdRegex.Create("HTTP\/1.1 (?<status>\d+) (?<statusText>.*)\s+(?<headers>(?:.+: .+\n)*)\n(?<body>.*)")
+  Dim responses as stdArray: Set responses = stdArray.CreateWithOptions(initialData.length, 10)
+  Dim index as long: index = 0
+  Dim request As stdHTTP
+  For each request in col
+    'Await request to ensure it is complete
+    Call request.Await()
+
+    'Parse the response
+    Dim batchResponse as string: batchResponse = request.ResponseText
+    Dim cMatches As Collection: Set matches = regex.MatchAll(batchResponse)
+    Dim aMatches as stdArray: set aMatches = stdArray.CreateFromCollection(matches)
+    
+    'Remove last item as per workaround for issue described @ https://learn.microsoft.com/en-us/answers/questions/1383519/error-while-trying-to-bulk-update-sharepoint-onlin
+    select case typeOfRequest
+      case "update", "delete"
+        set aMatches = aMatches.Slice(0,-1) 
+    end select
+    
+    'Loop matches and zip with original data
+    Dim match As object
+    For each match in aMatches
+      index = index + 1
+      With stdJSON.Create()
+        .add "status", match.item("status")
+        .add "statusText", match.item("statusText")
+        .add "headers", stdJSON.CreateFromString(match.item("headers"))
+        .add "body", stdJSON.CreateFromString(match.item("body"))
+        .add "input", initialData.item(index)
+        Call responses.Push(.ToSelf())
+      end with
+    Next
+  Next
+  set protProcessBatchResponse = responses
 End Function
 
 'Uses $batch query to update many items in a sharepoint list in as few requests as possible
 '@param changes - Changes in the form `{id: ..., data: {field1: ..., ...}}`
 '@param changeSetID - an id for each sub-request
 '@param batchUUID - an id for the whole request
+'@returns - HTTPCollection of responses. Use `http.ResponseMapped()` to get returned data
 '@docs https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/make-batch-requests-with-the-rest-apis
-Public Function ListItemsUpdateBatch(ByVal changes As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As stdArray
+Public Function ListItemsUpdateBatch(ByVal changes As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As HTTPCollection
   Dim itemType As String: itemType = getListItemType().Await().ResponseMapped()
   If changeSetID = "" Then changeSetID = getGUID()
   If batchUUID = "" Then batchUUID = getGUID()
-  Dim responses As stdArray: Set responses = stdArray.Create()
+  Dim responses As HTTPCollection: Set responses = HTTPCollection.Create()
 
   'A max of 1000 operations are allowed in a changeset; To stay well under this value, we use batches of 750.
   For Each changeSet In changes.SplitToChunks(750)
@@ -472,25 +520,26 @@ Public Function ListItemsUpdateBatch(ByVal changes As stdArray, Optional ByVal c
     Next
 
     'End changeset to create Data
-    Call batch.Push("--changeSetId_" & changeSetID & "--")
+    Call batch.Push("--changeset_" & changeSetID & "--")
     Dim body As String: body = batch.Join(vbCrLf)
 
     'Make request via RawRequest
     Dim headers As stdJSON: Set headers = stdJSON.CreateFromParams(eJSONObject, "Content-Type", "multipart/mixed; boundary=batch_" & batchUUID)
     Dim request As stdHTTP: Set request = RawRequest("_api/$batch", "POST", headers, body)
-    Call responses.Push(request)
+    Call responses.add(request)
   Next
   
-  'TODO: Parse to better result set
+  
   Set ListItemsUpdateBatch = responses
+  Set ListItemsUpdateBatch.responseMapper = stdCallback.CreateFromObjectMethod(Me, "protProcessBatchResponse").bind("update", additions)
 End Function
 
 'Uses $batch query to delete many items in a sharepoint list in as few requests as possible
 '@docs https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/make-batch-requests-with-the-rest-apis
-Public Function ListItemsDeleteBatch(ByVal deletionIDs As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As stdArray
+Public Function ListItemsDeleteBatch(ByVal deletionIDs As stdArray, Optional ByVal changeSetID As String, Optional ByVal batchUUID As String) As HTTPCollection
   If changeSetID = "" Then changeSetID = getGUID()
   If batchUUID = "" Then batchUUID = getGUID()
-  Dim responses As stdArray: Set responses = stdArray.Create()
+  Dim responses As HTTPCollection: Set responses = HTTPCollection.Create()
 
   'A max of 1000 operations are allowed in a changeset; To stay well under this value, we use batches of 750.
   For Each changeSet In deletionIDs.SplitToChunks(750)
@@ -519,17 +568,17 @@ Public Function ListItemsDeleteBatch(ByVal deletionIDs As stdArray, Optional ByV
     Next
 
     'End changeset to create Data
-    Call batch.Push("--changeSetId_" & changeSetID & "--")
+    Call batch.Push("--changeset_" & changeSetID & "--")
     Dim body As String: body = batch.Join(vbCrLf)
 
     'Make request via RawRequest
     Dim headers As stdJSON: Set headers = stdJSON.CreateFromParams(eJSONObject, "Content-Type", "multipart/mixed; boundary=batch_" & batchUUID)
     Dim request As stdHTTP: Set request = RawRequest("_api/$batch", "POST", headers, body)
-    Call responses.Push(request)
+    Call responses.add(request)
   Next
   
-  'TODO: Parse to better result set
   Set ListItemsDeleteBatch = responses
+  Set ListItemsDeleteBatch.responseMapper = stdCallback.CreateFromObjectMethod(Me, "protProcessBatchResponse").bind("delete", additions)
 End Function
 
 '@devNote ```HTTP
