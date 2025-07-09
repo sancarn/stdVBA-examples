@@ -3,6 +3,10 @@ Sub ShowForm()
   AccessibilityInspector.Show
 End Sub
 
+Sub ShowForRoot(ByVal root As tvAcc)
+  Call AccessibilityInspector.CreateForRoot(root)
+End Sub
+
 Sub dumpClassesAll()
   Call dumpClasses(stdShell.CreateFile("C:\Temp\classes.txt"), stdAcc.CreateFromDesktop())
 End Sub
