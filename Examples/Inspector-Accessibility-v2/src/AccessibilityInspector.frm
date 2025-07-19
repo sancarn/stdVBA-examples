@@ -126,7 +126,19 @@ Private Sub btnSearch_Click()
   btnSearch.SpecialEffect = fmSpecialEffectRaised
 End Sub
 
-Private Sub UserForm_Initialize()
+Public Function Create() As AccessibilityInspector
+  Set Create = CreateForRoot(Nothing)
+End Function
+
+Public Function CreateForRoot(ByVal root As tvAcc) As AccessibilityInspector
+  Set CreateForRoot = New AccessibilityInspector
+  Call CreateForRoot.protInit(root)
+  Call CreateForRoot.Show
+End Function
+
+
+Public Sub protInit(Optional ByVal root As tvAcc = Nothing)
+  If root Is Nothing Then Set root = tvAcc.CreateFromDesktop()
   With This.init
     .AllTop = TreeControl.top
     .TreeControlLeft = TreeControl.left
@@ -152,7 +164,7 @@ Private Sub UserForm_Initialize()
   
   'Roots to render in tree
   Dim roots As Collection: Set roots = New Collection
-  Call roots.Add(tvAcc.CreateFromDesktop())
+  Call roots.Add(root)
   
   'Create tree
   Set tree = tvTree.Create( _
