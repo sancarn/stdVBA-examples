@@ -167,7 +167,83 @@ At a high level:
     * Similarly, each function is wrapped with stdCallback
   * Uses regex to rewrite the syntax `r[A1]` and `[A1]` as `targetSheet.Range("A1")` and `targetSheet.Range("A1").value` respectively.
 
-![_](docs/ProjectStructure.png)
+```mermaid
+flowchart LR
+    linkStyle default interpolate linear
+
+    subgraph BaseLibraries[stdVBA Libraries]
+        SE[stdEnumerator]
+        SA[stdArray]
+        SCB[stdCallback]
+        SCOM[stdCOM]
+        SIC[stdICallable]
+        SL[stdLambda]
+        SR[stdRegex]
+        SP[stdPicture]
+    end
+
+    subgraph Extractor[Spreadsheet Extractor]
+        note1([Of file paths]):::callout
+        note2([Of results]):::callout
+        XLE[xrLambdaEx]
+        XC[xrCategories]
+        XR[xrRules]
+        XE[xrExtractor]
+    end
+
+    %% Connections from base libraries to xrLambdaEx
+    SE --> XE
+    SA --> XE
+    SCB --> XLE
+    SCOM --> XLE
+    SIC --> XLE
+    SL --> XLE
+    SR --> XLE
+    SP --> XLE
+
+    %% xrLambdaEx feeds into Categories and Rules
+    XLE --> XC
+    XLE --> XR
+
+    %% Categories and Rules feed into Extractor
+    XC --> XE
+    XR --> XE
+
+    %% Callouts
+    classDef callout fill:#ccc,stroke:#333,stroke-width:1px,color:#000,font-size:12px;
+    
+
+    SE -.-> note1
+    SA -.-> note2
+```
+
+#### High level flowchart
+
+```mermaid
+flowchart TD
+    Start --> A
+    A[ExtractorMain] --> B[Setup: Load Paths, Categories, Rules]
+    B --> C[Create hidden Excel instances for performance]
+    C --> D[Loop over each Path in Paths table]
+    D -->|If not Processed| E[Open Workbook via forceOpenWorkbook]
+    E --> F[Loop over Worksheets]
+    F --> G[Determine Category via xrCategories.getCategory]
+    G -->|Uses stdArray + stdLambda + stdCallback| Gnote[Category conditions evaluated dynamically]
+    G --> H[Execute Rules via xrRules.executeRules]
+    H -->|Uses stdLambdaEx + stdRegex + stdArray| Hnote[Rules compiled from DSL and executed with targetSheet context]
+    H --> I[Push Results into stdArray]
+    I --> J[Mark Path as Processed]
+    J --> D
+    D -->|All done| K[Quit hidden Excel instances]
+    K --> L[Export Results to Output Table]
+    L -->|Uses stdArray + stdEnumerator| Lnote[Results converted to 2D array and written to ListObject]
+    L --> M[End]
+
+    %% Callouts
+    Gnote -.-> G
+    Hnote -.-> H
+    Lnote -.-> L
+```
 
 ## Roadmap
 

@@ -41,3 +41,52 @@ End Function
 ```
 
 ![_](./docs//TransformerExample.png)
+
+## High Level Process
+
+```mermaid
+flowchart TD
+    A[Start] --> B["Create DemoClass Instance<br/>Set Test1='a', Test2='b'"]
+    B --> C[Dump Input Properties to Sheet<br/>via DumpPropsToRange]
+    C --> D["Call frTransformer.AlterObject(o)"]
+    
+    %% AlterObject flow
+    D --> E[Create New Transformer Form]
+    E --> F["Loop over Object Properties via stdCOM.Create(obj).Properties"]
+    F --> G[For Each Property<br/>Create Label + TextBox via stdUIElement]
+    G --> H[Bind TextBox to Property<br/>using stdCallback + stdLambda]
+    H --> F
+    F --> I[Show Transformer Form]
+    I --> J>User Edits Properties in Form, and closes it]
+    J --> K[Property Values Updated on Object]
+    K --> L[Dump Output Properties to Sheet<br/>via DumpPropsToRange]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SC[stdCOM]
+        SUI[stdUIElement]
+        SCB[stdCallback]
+        SL[stdLambda]
+    end
+
+    subgraph Demo[Demo Project]
+        DC[DemoClass]
+        FT[frTransformer]
+        MM[mMain]
+    end
+
+    %% Dependencies
+    MM --> DC
+    MM --> FT
+    MM --> SC
+    MM --> SCB
+
+    FT --> SC
+    FT --> SUI
+    FT --> SCB
+    FT --> SL
+```

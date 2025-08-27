@@ -28,8 +28,37 @@ Sub Main()
 End Sub
 ```
 
+## High Level Process
+
+```mermaid
+flowchart TD
+    B[Choose Browser Type]
+    B --> E[Resize Current App to Left Half]
+    E --> F[Find & Resize Browser to Right Half using stdWindow and stdLambda]
+    F --> G[Activate Browser]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA]
+        SL[stdLambda]
+        SW[stdWindow]
+    end
+
+    subgraph SideBySideRoutine[SideBySide Routine]
+        SB[SideBySide]
+    end
+
+    %% Dependencies
+    SL --> SB
+    SW --> SB
+```
+
 ## Comparison with pure VBA
 
 With `stdVBA` we've trimmed our solution down to 162 lines to about 62. `stdVBA` helps you cut down on boiler plate and helps you focus on the important questions like "How do I move my window" rather than "How do I get the caption text of a window?".
 
 ![comparison](docs/comparison.png)
+

@@ -52,3 +52,81 @@ Navigate the treeview to insect the accessibility information of desktop windows
 * [X] Ability to only show visible elements.
 * [X] Option to highlighting the selected accessibility element with a yellow rect.
 * [ ] Option to find and display the hovered element within the accessibility tree.
+
+## High Level Process
+
+```mermaid
+flowchart TD
+    A[Open Accessibility Inspector Form] --> B[Initialize TreeControl and Property Panel]
+    B --> C[Create tvTree with Root Element<br/>via tvAcc.CreateFromDesktop]
+    C --> D[Add Fields to Property Panel<br/>via uiFields.AddField with stdLambda/stdCallback]
+
+    %% Global actions
+    C --> GA[User Can Search, Follow Mouse, or Refresh Tree]
+
+    %% Tree interaction
+    C --> E[User Expands Tree Node]
+    E --> F[Retrieve Children via tvAcc.Children]
+    F --> G[Loop over Children]
+    G --> H[Add Child Nodes to Tree]
+    H --> E
+
+    %% Selection interaction
+    D --> I[User Selects Element in Tree]
+    I --> J[Update Property Panel via uiFields.UpdateSelection]
+    J --> K[Display Properties: Identity, Name, Value, Role, States, etc.]
+    K --> L[Optional Actions: DoDefaultAction, SetValue, Copy Selector, Highlight Rectangle]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SL[stdLambda]
+        SCB[stdCallback]
+        SW[stdWindow]
+        SP[stdProcess]
+        SA[stdAcc]
+        SCL[stdClipboard]
+    end
+
+    subgraph UIHelpers[UI Helpers]
+        UF[uiFields]
+        UE[uiElement]
+        UM[uiIMessagable]
+    end
+
+    subgraph TreeHelpers[Tree Helpers]
+        TT[tvTree]
+        TA[tvAcc]
+    end
+
+    subgraph Inspector[AccessibilityInspector Form]
+        AI[AccessibilityInspector]
+    end
+
+    %% Inspector dependencies
+    AI --> TT
+    AI --> UF
+    AI --> SL
+    AI --> SCB
+    AI --> SW
+    AI --> SP
+    AI --> SA
+    AI --> SCL
+
+    %% Tree dependencies
+    TT --> SL
+    TT --> SCB
+    TT --> TA
+
+    %% tvAcc depends on stdAcc
+    TA --> SA
+
+    %% uiFields internals
+    UF --> UE
+    UF --> UM
+    UF --> SL
+    UF --> SCB
+```

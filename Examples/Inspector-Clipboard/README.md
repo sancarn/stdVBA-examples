@@ -24,4 +24,57 @@ By providing visibility into the clipboard's inner workings, the Clipboard Inspe
 - [X] Show images copied to clipboard as images in the viewer
 - [ ] Clipboard History
 
+## High Level Process
+
+```mermaid
+flowchart TD
+    A[Start ClipboardInspector Form] --> B[Initialize stdTimer to poll clipboard every 300ms]
+    B --> C[Initialize Anchors for ListView and Preview Frame]
+    C --> D[Timer Tick Event]
+    D --> E[Check ClipboardID via stdClipboard]
+    E -->|If Changed| F[Clear ListView and Rebuild Formats List]
+    F --> G[Loop over Clipboard Formats via stdClipboard.formatIDs]
+    G --> H[Add Format ID, Name, Size to ListView]
+    H --> D
+
+    F --> I[User Selects Format in ListView]
+    I --> J[Preview Content in frPreview]
+    J -->|If Image| K[Show as Image]
+    J -->|If Text| L[Show as TextBox with content]
+    J -->|Else| M[Show Hexdump + Stringified bytes]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SC[stdClipboard]
+        ST[stdTimer]
+        SW[stdWindow]
+        SUI[stdUIElement]
+    end
+
+    subgraph Anchoring[Anchoring Helpers]
+        MA[MAnchoring::TElementAnchor]
+    end
+
+    subgraph Logging[Logger]
+        LG[GlobalLog via stdShell]
+    end
+
+    subgraph ClipboardInspectorForm[ClipboardInspector Form]
+        CI[ClipboardInspector]
+        MM[mMain.Main]
+    end
+
+    %% Dependencies
+    MM --> CI
+    CI --> SC
+    CI --> ST
+    CI --> SW
+    CI --> SUI
+    CI --> MA
+    CI --> LG
+```
 

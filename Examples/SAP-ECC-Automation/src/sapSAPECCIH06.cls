@@ -14,7 +14,7 @@ Const EXPORT_DIR As String = "C:\Users\$username\Documents\MY SAP OUTPUTS"
 '* stdICallable
 '* stdAcc
 '* stdWindow
-'* stwSAPECC
+'* sapSAPECC
 '  * stdICallable
 '  * stdAcc
 '  * stdWindow
@@ -48,7 +48,7 @@ End Type
 
 Private Type TThis
   Singleton As TSingleton
-  ecc As stwSAPECC
+  ecc As sapSAPECC
   Internals As SAPECCIH06Internals
 End Type
 Private This As TThis
@@ -61,7 +61,7 @@ Public Function CreateSync() As sapSAPECCIH06
   This.Singleton.wasGuiXTEnabled = settingGuiXT
   settingGuiXT = True
   
-  Dim ecc As stwSAPECC: Set ecc = stwSAPECC.Create()
+  Dim ecc As sapSAPECC: Set ecc = sapSAPECC.Create()
   Set CreateSync = New sapSAPECCIH06
   Call CreateSync.protInit(ecc)
 End Function
@@ -70,7 +70,7 @@ End Function
 '@constructor
 '@param Ecc - An instance of SAP ECC
 '@returns {sapSAPECCIH06} An IH06 search object
-Public Function CreateFromExisting(ByVal ecc As stwSAPECC) As sapSAPECCIH06
+Public Function CreateFromExisting(ByVal ecc As sapSAPECC) As sapSAPECCIH06
   Set CreateFromExisting = New sapSAPECCIH06
   Call CreateFromExisting.protInit(ecc)
 End Function
@@ -83,13 +83,13 @@ End Property
 
 'Initialisation function
 '@protected
-'@param {stwSAPECC} An instance of SAP ECC which can be used for automation
-Friend Sub protInit(ByVal ecc As stwSAPECC)
+'@param {sapSAPECC} An instance of SAP ECC which can be used for automation
+Friend Sub protInit(ByVal ecc As sapSAPECC)
   Set This.ecc = ecc
   This.ecc.Transaction = "IH06"
 End Sub
 
-Public Property Get ecc() As stwSAPECC
+Public Property Get ecc() As sapSAPECC
     Set ecc = This.ecc
 End Property
 

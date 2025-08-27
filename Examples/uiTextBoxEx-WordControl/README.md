@@ -56,3 +56,48 @@ End Sub
 * Slow startup
     * Try to avoid create a huge quantity of these textboxes. A brand new word instance is created for each textbox, and that's pretty performance heavy. Instead keep 1 textbox and change the parent of it if necessary.
 * Sometimes ui appears to go offscreen and there are potential sizing issues - happy for PRs to correct this.
+
+## High Level Process
+
+```mermaid
+%%{init: {"flowchart": {"defaultRenderer": "elk"}} }%%
+flowchart TD
+    linkStyle default interpolate linear
+
+    A[UserForm Initialize] --> B[Create uiTextBoxEx with Frame]
+    B --> C[protInit: Create Word.Application instance]
+    C --> D[Add New Word Document]
+    D --> E[Configure Word Window<br/>WebLayout, Hide Rulers, Resize to Frame]
+    E --> F[Find Word Pane via stdWindow + stdLambda]
+    F --> G[Reparent Word Pane into UserForm Frame]
+    G --> H[Expose Properties: Text, OpenXML, ReadOnly]
+    H --> I>User Interacts with TextBoxEx<br/>Typing, Spellcheck, Formatting]
+    I --> J[On Terminate → Quit Word Process via stdProcess]
+```
+
+## Project Structure    
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SL[stdLambda]
+        SW[stdWindow]
+        SP[stdProcess]
+        SI[stdICallable]
+    end
+
+    subgraph UIControl[uiTextBoxEx Control]
+        TB[uiTextBoxEx]
+    end
+
+    subgraph HostForm[Test UserForm]
+        UF[Test Form]
+    end
+
+    %% Dependencies
+    UF --> TB
+    TB --> SL
+    TB --> SW
+    TB --> SP
+    TB --> SI
+```

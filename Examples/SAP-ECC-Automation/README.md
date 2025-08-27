@@ -35,5 +35,58 @@ Additional modules are required for asynchronous processing. Asynchronous proces
 * stdProcess
 * stdCallback
 
+## High Level Process
 
+Typical process flow for loading and exporting several variants from IH06:
 
+```mermaid
+flowchart TD
+    B[Create IH06 Instance sapSAPECCIH06.CreateSync]
+    B --> B1[Ensure GuiXT Enabled]
+    B1 --> C[Initialise SAP ECC Session Transaction = IH06]
+
+    C --> D[Loop over Variants e.g. 3 times]
+    D --> E[Load Variant using sapSAPECCIH06.loadVariqant]
+    E --> F[Execute Search and await results]
+    F --> G[Export Results → CSV using sapECCIH06.exportAsSpreadsheet]
+    G --> D
+
+    D -->|All Variants Processed| H[Return to Home / Reset GuiXT]
+    H --> I[Complete]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SA[stdAcc]
+        SW[stdWindow]
+        SCB[stdClipboard]
+        SI[stdICallable]
+        SL[stdLambda]
+        SR[stdReg]
+    end
+
+    subgraph SAPCore[SAP ECC Core]
+        SE[sapSAPECC]
+        
+    end
+
+    subgraph IH06[IH06 Automation]
+        IH[sapSAPECCIH06]
+    end
+
+    %% Dependencies
+    IH --> SE
+    IH --> SA
+    IH --> SW
+    IH --> SCB
+    IH --> SL
+    IH --> SR
+
+    SE --> SA
+    SE --> SW
+    SE --> SCB
+    SE --> SI
+```

@@ -91,3 +91,64 @@ The header names mean the following:
 </table>
 
 Now when we click Execute, each macro will be run when it is able to, fully automatically. Multiple workbooks will be ran in parallel too, allowing faster runtimes.
+
+## High Level Process
+
+```mermaid
+flowchart TD
+    A[Start ExecuteAll] --> B[Load Jobs Table via stdEnumerator]
+    B --> C[Loop over Jobs]
+    C --> D[Check Frequency Lambda<br/>Update Status to Waiting if due]
+    D --> C
+    C --> E[Load Extensions Table<br/>Create Extension Objects]
+    E --> F[Convert Jobs to mdJob Objects]
+    F --> G[Add Dependencies between Jobs]
+    G --> H[Loop While Incomplete Jobs Exist]
+    H --> I[Filter Jobs not Complete or Error]
+    I --> J[Loop over Active Jobs]
+    J --> K[Advance Job via mdJob.protStep]
+    K --> L[Update Job Status and StatusDate in Table]
+    L --> J
+    J -->|dependency check| H
+    H -->|All Jobs Complete| M[Finish]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SE[stdEnumerator]
+        SL[stdLambda]
+        SR[stdReg]
+        SA[stdAcc]
+        SW[stdWindow]
+    end
+
+    subgraph Dispatcher[Macro Dispatcher]
+        MM[mdMain]
+        MJ[mdJob]
+        MX[mdExtension]
+    end
+
+    subgraph ExcelTables[Excel Tables]
+        TJ[Jobs Table]
+        TE[Extensions Table]
+    end
+
+    %% Main flow
+    MM --> TJ
+    MM --> TE
+    MM --> MJ
+    MM --> MX
+
+    %% mdJob dependencies
+    MJ --> SE
+    MJ --> SL
+    MJ --> SR
+    MJ --> SA
+    MJ --> SW
+
+    %% mdExtension
+    MX --> MJ
+```

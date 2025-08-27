@@ -47,3 +47,50 @@ This is a stdVBA solution which uses accessibility APIs and Google Chrome to per
 ## Similar projects
 
 * [Chrome DevProtocol](https://github.com/PerditionC/VBAChromeDevProtocol) - stdVBA wants to have a `stdBrowser` which interacts with browser devtool protocols; however this repo is already most of the way there! With this library you'll be able to control browsers on a deeper level and gain the ability to execute javascript for instance.
+
+## High Level Process
+
+A typical high level process for an ArcGIS automation example.
+
+```mermaid
+flowchart TD
+    A[Start] --> B[Build Command with GUID and Params]
+    B --> C[Launch Edge Process via stdProcess]
+    C --> D[Loop until Edge Window Found<br/>via stdWindow.CreateFromDesktop]
+    D --> E[Initialize stdEdge with Window and accMain]
+    E --> F[Find Address Bar via stdAcc + stdLambda]
+
+    %% User actions
+    F --> G[Set or Get Address Property]
+    G --> H["Navigate to URL<br/>(Address = 'https://...')"]
+    H --> I[AwaitForCondition<br/>Loop until callback returns True or Timeout]
+    I --> J[AwaitForAccElement<br/>Loop until element found or Timeout]
+    J --> K["Perform Automation Tasks<br/>(Fill forms, Click buttons, etc.)"]
+    K --> L[Quit Edge Window if Temporary]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA]
+        SA[stdAcc]
+        SE[stdEnumerator]
+        SL[stdLambda]
+        SP[stdProcess]
+        SW[stdWindow]
+        SI[stdICallable]
+    end
+
+    subgraph BrowserAutomation[Browser Automation]
+        SB["stdBrowser<br/>(or stdChrome / stdEdge)"]
+    end
+
+    %% Dependencies
+    SB --> SA
+    SB --> SE
+    SB --> SL
+    SB --> SP
+    SB --> SW
+    SB --> SI
+```

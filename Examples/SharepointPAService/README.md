@@ -160,3 +160,47 @@ Sub TestListItemDeleteBulk()
   Dim results as string: results = x.map(stdLambda.Create("$1.Await().ResponseText")).join(vbCrLf & vbCrLf)
 End Sub
 ```
+
+## High Level Process
+
+```mermaid
+flowchart TD
+    B[Create SPPAService from Config]
+    B --> C[Call List Operation E.G: ListItem, ListItemCreate, ListItemUpdate, ListItemDelete, ...]
+    C --> D[SPPAService builds API Request via RawRequest]
+    D --> E[Send HTTP Request with stdHTTP]
+    E --> F[Await Response]
+    F --> G[ResponseMapper parses JSON using stdLambda + stdJSON]
+    G --> H[Return Parsed Result]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA]
+        SJ[stdJSON]
+        SH[stdHTTP]
+        SL[stdLambda]
+        SCB[stdCallback]
+        SA[stdArray]
+        SR[stdRegex]
+    end
+
+    subgraph SPPA[SPPAService Library]
+        SP[SPPAService]
+        HC[HTTPCollection]
+    end
+
+    HC --> SCB
+
+    SP --> SH
+    SP --> SJ
+    SP --> SL
+    SP --> SCB
+    SP --> SA
+    SP --> SR
+    SP --> HC
+
+    HC --> SH
+```

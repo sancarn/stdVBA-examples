@@ -43,3 +43,41 @@ Move your mouse around to extract accessibility information
 ## Known issues
 
 * Path field has currently been disabled. See roadmap.
+
+## High Level Process
+
+```mermaid
+flowchart TD
+    A[Launch AccHelper Form] --> B[Form Shows and Watch Loop Starts]
+
+    B --> C[Capture Element via stdAcc.CreateFromMouse]
+    C --> D[Update UI with Element Properties]
+
+    D --> E[User Can Perform Actions<br/>SetValue or DoDefaultAction]
+    E --> B
+
+    B --> F[If Temporary Mode Active<br/>Stop After 5s]
+    F --> B
+
+    B --> G[User Closes Form → Exit]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SA[stdAcc]
+        SW[stdWindow]
+    end
+
+    subgraph Inspector[Inspector]
+        LI[Launch]
+        AH[AccHelper]
+    end
+
+    %% Dependencies
+    LI --> AH
+    AH --> SA
+    AH --> SW
+```

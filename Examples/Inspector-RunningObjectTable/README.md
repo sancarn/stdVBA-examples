@@ -18,3 +18,55 @@ Understanding how the ROT works and being able to inspect it is essential for de
 Additionally this example serves as a demonstration of how to use `stdCOM.CreateFromActiveObjects()`, a method which returns a `Collection` of objects containing moniker details.
 
 ![_](docs/inspector-rot.png)
+
+## High Level Process
+
+```mermaid
+flowchart TD
+    A[Open ROT Viewer Form] --> B[Initialize uiFields in Property Panel]
+    B --> C[Add Fields: Name, Object Type, ProgID<br/>via stdLambda expressions]
+    C --> D[RefreshMonikers Called]
+    D --> E[Retrieve Active COM Objects<br/>via stdCOM.CreateFromActiveObjects]
+
+    %% Loop over monikers
+    E --> F[Loop over Monikers]
+    F --> G[Add Moniker Name to ListBox]
+    G --> F
+
+    F --> H[User Selects Moniker in ListBox]
+    H --> I[Update Property Panel<br/>via uiFields.UpdateSelection]
+    I --> J[Display Moniker Details]
+    J --> K[User Can Refresh Again or Close]
+```
+
+## Project Structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA Utilities]
+        SC[stdCOM]
+        SL[stdLambda]
+        SCB[stdCallback / stdICallable]
+    end
+
+    subgraph UIHelpers[UI Helpers]
+        UF[uiFields]
+        UE[uiElement]
+        UM[uiIMessagable]
+    end
+
+    subgraph ROTViewer[ROTView Form]
+        RV[ROTView]
+    end
+
+    %% Dependencies
+    RV --> SC
+    RV --> SL
+    RV --> UF
+
+    %% uiFields internals
+    UF --> SCB
+    UF --> SL
+    UF --> UE
+    UF --> UM
+```

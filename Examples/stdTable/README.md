@@ -94,3 +94,27 @@ End Function
 ```
 
 This is a fairly advanced technique, but leads to some very powerful functionality. You can find out more about currying [here](https://youtu.be/nuML9SmdbJ4).
+
+## Project structure
+
+```mermaid
+flowchart LR
+    subgraph BaseLibraries[stdVBA]
+        SE[stdEnumerator]
+        SCB[stdCallback]
+        SI[stdICallable]
+        SL[stdLambda]
+        SJ[stdJSON]
+    end
+
+    subgraph TableLib[Table Library]
+        ST[stdTable]
+    end
+
+    %% Dependencies
+    ST --> SE
+    ST --> SCB
+    ST --> SI
+    ST --> SL
+    ST --> SJ
+```
