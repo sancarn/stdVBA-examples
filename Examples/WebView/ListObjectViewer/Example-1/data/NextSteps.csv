@@ -1,0 +1,21 @@
+ID,Owner_ID,NextStep,DueDate,Priority,Status,Notes
+T001,E001,Finalize reliability improvement RFC and schedule rollout,15/04/2026,High,In Progress,Coordinate with infra; include downtime plan
+T002,E002,Migrate CI pipelines to new self-hosted runners,30/04/2026,High,Not Started,Need access to new runners and secrets
+T003,E003,Finalize and publish Q2 product roadmap,10/04/2026,High,In Progress,Sync with sales and marketing before publish
+T004,E004,Design and implement automated regression pipelines,01/05/2026,Medium,Not Started,Evaluate Playwright vs pytest for stability
+T005,E005,Build sales metrics dashboard and initial visualizations,20/04/2026,Medium,In Progress,Data sources: CRM and data warehouse
+T006,E006,Update PTO and remote work sections in employee handbook,25/04/2026,Low,Not Started,Legal review may be required
+T007,E007,Deliver new onboarding UX flows and usability findings,18/04/2026,Medium,In Progress,Usability tests scheduled next week
+T008,E008,Reach out to churned customers with feedback survey,12/04/2026,High,Not Started,Use standardized survey script; offer incentives
+T009,E009,Publish API documentation v2 after engineering review,22/04/2026,Medium,In Progress,Ensure code samples are up to date
+T010,E010,Prepare and present internship final project,08/04/2026,High,Not Started,Mentor: E001 (Alice Morgan); slide deck draft due 2026-04-03
+T011,E001,Run on-call postmortem for recent outage and publish TL;DR,07/04/2026,High,Not Started,Invite incident responders; include timeline and action items
+T012,E002,Harden CI security: rotate secrets and add ephemeral tokens,21/04/2026,High,Not Started,Coordinate with security team for approvals
+T013,E001,Conduct stakeholder workshop for feature prioritization,14/04/2026,Medium,Not Started,Prepare prioritization matrix and materials
+T014,E003,Add flaky test detection and quarantine mechanism,28/04/2026,Medium,Not Started,Tag tests and notify owners automatically
+T015,E001,Validate ETL pipeline freshness and set SLA alerts,16/04/2026,High,In Progress,Implement threshold-based alerts in monitoring
+T016,E006,Run benefits enrollment Q&A session for employees,19/04/2026,Low,Not Started,Create FAQ doc and slide deck
+T017,E007,Create component library for common UI patterns,05/05/2026,Medium,Not Started,"Start with buttons, forms, and modals"
+T018,E004,Build onboarding drip email sequence for new customers,26/04/2026,Medium,Not Started,Coordinate content with marketing
+T019,E009,Add code snippets for common SDK use-cases to docs,13/04/2026,Medium,In Progress,"Languages: Python, JavaScript, Java"
+T020,E002,Benchmark CI job durations and optimize slow steps,29/04/2026,Medium,Not Started,Collect historical job data and propose caching

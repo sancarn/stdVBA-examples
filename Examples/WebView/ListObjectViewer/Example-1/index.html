@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>ListObject Viewer</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --bg-soft: #1e293b;
+            --card: rgba(15, 23, 42, 0.72);
+            --card-border: rgba(148, 163, 184, 0.24);
+            --text: #e2e8f0;
+            --muted: #94a3b8;
+            --accent: #22d3ee;
+            --accent-soft: rgba(34, 211, 238, 0.18);
+            --status-blue-bg: #dbeafe;
+            --status-blue-text: #1d4ed8;
+            --status-grey-bg: #e2e8f0;
+            --status-grey-text: #475569;
+            --good: #10b981;
+            --warning: #f59e0b;
+            --low: #94a3b8;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            min-height: 100vh;
+            font-family: "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 12% 14%, #1d4ed8 0%, transparent 42%),
+                radial-gradient(circle at 82% 20%, #0ea5e9 0%, transparent 38%),
+                linear-gradient(145deg, var(--bg) 0%, #020617 100%);
+            padding: 24px;
+        }
+
+        .shell {
+            max-width: 980px;
+            margin: 0 auto;
+            display: grid;
+            gap: 18px;
+        }
+
+        .hero {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            backdrop-filter: blur(8px);
+            padding: 18px 20px;
+            box-shadow: 0 20px 36px rgba(2, 6, 23, 0.34);
+        }
+
+        .eyebrow {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: var(--accent);
+            margin: 0 0 6px;
+        }
+
+        .name {
+            margin: 0;
+            font-size: 29px;
+            line-height: 1.2;
+        }
+
+        .sub {
+            margin: 8px 0 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 18px;
+        }
+
+        .card {
+            background: var(--card);
+            border: 1px solid var(--card-border);
+            border-radius: 18px;
+            padding: 16px;
+            box-shadow: 0 12px 28px rgba(2, 6, 23, 0.22);
+        }
+
+        .spoiler {
+            padding: 0;
+            overflow: hidden;
+        }
+
+        .spoiler > summary {
+            list-style: none;
+            cursor: pointer;
+            margin: 0;
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .spoiler > summary::-webkit-details-marker {
+            display: none;
+        }
+
+        .spoiler > summary::after {
+            content: "Show";
+            color: var(--muted);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+        }
+
+        .spoiler[open] > summary::after {
+            content: "Hide";
+        }
+
+        .spoiler[open] > summary {
+            border-bottom: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        .spoiler-content {
+            padding: 14px 16px 16px;
+        }
+
+        .card-title {
+            margin: 0 0 14px;
+            font-size: 15px;
+            color: #bae6fd;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .kv {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 10px;
+        }
+
+        .kv-item {
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 10px 12px;
+            background: rgba(15, 23, 42, 0.35);
+            display: grid;
+            gap: 6px;
+        }
+
+        .k {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .v {
+            text-align: left;
+            font-weight: 600;
+            font-size: 14px;
+        }
+
+        .chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            border-radius: 999px;
+            padding: 6px 12px;
+            font-size: 12px;
+            font-weight: 700;
+            line-height: 1;
+            letter-spacing: 0.02em;
+            border: 1px solid transparent;
+        }
+
+        .status-not-started {
+            background: var(--status-grey-bg);
+            color: var(--status-grey-text);
+            border-color: #cbd5e1;
+        }
+
+        .status-in-progress {
+            background: var(--status-blue-bg);
+            color: var(--status-blue-text);
+            border-color: #93c5fd;
+        }
+
+        .priority-high {
+            color: var(--warning);
+        }
+
+        .priority-medium {
+            color: var(--good);
+        }
+
+        .priority-low {
+            color: var(--low);
+        }
+
+        .priority-glyph {
+            display: inline-block;
+            font-size: 12px;
+            line-height: 1;
+        }
+
+        .next-step-title {
+            margin: 4px 0 8px;
+            font-size: 18px;
+            line-height: 1.35;
+        }
+
+        .next-step-notes {
+            margin: 12px 0 0;
+            color: #cbd5e1;
+            font-size: 13px;
+            line-height: 1.5;
+            background: var(--accent-soft);
+            border-radius: 12px;
+            padding: 10px 12px;
+        }
+
+        .next-step-list {
+            display: grid;
+            gap: 14px;
+        }
+
+        .next-step-item {
+            border: 1px solid var(--card-border);
+            border-radius: 14px;
+            padding: 12px;
+            background: rgba(15, 23, 42, 0.35);
+        }
+
+        .meta-strip {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+        }
+
+        .tag {
+            border: 1px solid rgba(148, 163, 184, 0.3);
+            color: #cbd5e1;
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 999px;
+            padding: 6px 10px;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .empty {
+            border-radius: 14px;
+            border: 1px dashed rgba(148, 163, 184, 0.42);
+            color: var(--muted);
+            padding: 18px;
+            text-align: center;
+            font-size: 14px;
+            background: rgba(15, 23, 42, 0.42);
+        }
+
+        .error {
+            margin-top: 12px;
+            border: 1px solid rgba(244, 63, 94, 0.45);
+            background: rgba(159, 18, 57, 0.18);
+            color: #fecdd3;
+            border-radius: 12px;
+            padding: 10px 12px;
+            font-size: 12px;
+        }
+
+        @media (max-width: 860px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .name {
+                font-size: 24px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <main class="shell">
+        <section class="hero">
+            <p class="eyebrow">ListObject Viewer</p>
+            <h1 class="name" id="employeeName">Select a row in Excel</h1>
+            <p class="sub" id="employeeSub">Employee details and Next Steps will appear here.</p>
+            <div id="errorArea"></div>
+        </section>
+
+        <section class="grid">
+            <details class="card spoiler">
+                <summary class="card-title">Employee Profile</summary>
+                <div class="spoiler-content">
+                    <div id="employeeCard" class="empty">No employee selected yet.</div>
+                </div>
+            </details>
+
+            <article class="card">
+                <h2 class="card-title">Next Steps</h2>
+                <div id="nextStepCard" class="empty">No Next Steps available.</div>
+            </article>
+        </section>
+    </main>
+
+    <script>
+        const state = {
+            signature: "",
+            pollMs: 5000
+        };
+
+        const knownFields = [
+            "ID", "FirstName", "LastName", "Role", "Department", "Email",
+            "HireDate", "Salary", "FullTime", "NextSteps"
+        ];
+
+        const statusClasses = {
+            "Not Started": "status-not-started",
+            "In Progress": "status-in-progress"
+        };
+
+        const priorityDisplay = {
+            High: { icon: "&#9650;", css: "priority-high" },
+            Medium: { icon: "&#9670;", css: "priority-medium" },
+            Low: { icon: "&#9679;", css: "priority-low" }
+        };
+
+        function byId(id) {
+            return document.getElementById(id);
+        }
+
+        function toText(value, fallback = "N/A") {
+            if (value === null || value === undefined) return fallback;
+            const txt = String(value).trim();
+            return txt === "" ? fallback : txt;
+        }
+
+        function parseMoney(rawValue) {
+            const num = Number(rawValue);
+            if (Number.isNaN(num)) return toText(rawValue);
+            return new Intl.NumberFormat("en-US", {
+                style: "currency",
+                currency: "USD",
+                maximumFractionDigits: 0
+            }).format(num);
+        }
+
+        function normalizeFullTime(value) {
+            const raw = String(value || "").toLowerCase();
+            if (raw === "true" || raw === "-1") return "Full Time";
+            if (raw === "false" || raw === "0") return "Part Time";
+            return toText(value);
+        }
+
+        function renderError(message) {
+            byId("errorArea").innerHTML = message
+                ? "<div class='error'>" + message + "</div>"
+                : "";
+        }
+
+        function statusBadge(statusValue) {
+            const text = toText(statusValue, "Not Started");
+            const css = statusClasses[text] || "status-not-started";
+            return "<span class='chip " + css + "'>" + text + "</span>";
+        }
+
+        function priorityChip(priorityValue) {
+            const key = toText(priorityValue, "Low");
+            const display = priorityDisplay[key] || priorityDisplay.Low;
+            return "<span class='chip'><span class='priority-glyph " + display.css + "'>" + display.icon + "</span> " + key + "</span>";
+        }
+
+        function getFieldCI(obj, aliases, fallback) {
+            if (!obj || typeof obj !== "object") return fallback;
+            const entries = Object.entries(obj);
+            const normalized = {};
+            for (const [k, v] of entries) {
+                normalized[String(k).toLowerCase().replace(/[^a-z0-9]/g, "")] = v;
+            }
+            for (const alias of aliases) {
+                const key = String(alias).toLowerCase().replace(/[^a-z0-9]/g, "");
+                if (Object.prototype.hasOwnProperty.call(normalized, key)) {
+                    return normalized[key];
+                }
+            }
+            return fallback;
+        }
+
+        function parseNextStepsPayload(raw) {
+            if (raw === null || raw === undefined) return null;
+            const text = String(raw).trim();
+            if (!text) return null;
+
+            try {
+                return JSON.parse(text);
+            } catch (_ignored) {
+                try {
+                    // Excel often stores embedded JSON with doubled quotes.
+                    const repaired = text.replace(/""/g, "\"");
+                    return JSON.parse(repaired);
+                } catch (err) {
+                    throw err;
+                }
+            }
+        }
+
+        function renderEmployee(row) {
+            if (!row) {
+                byId("employeeName").textContent = "Select a row in Excel";
+                byId("employeeSub").textContent = "Employee details and Next Steps will appear here.";
+                byId("employeeCard").innerHTML = "No employee selected yet.";
+                byId("employeeCard").className = "empty";
+                return;
+            }
+
+            const fullName = toText(row.FirstName, "") + " " + toText(row.LastName, "");
+            byId("employeeName").textContent = fullName.trim() || toText(row.ID, "Unknown Employee");
+            byId("employeeSub").textContent = toText(row.Role) + " in " + toText(row.Department);
+
+            byId("employeeCard").className = "kv";
+            byId("employeeCard").innerHTML =
+                "<div class='kv-item'><span class='k'>Employee ID</span><span class='v'>" + toText(row.ID) + "</span></div>" +
+                "<div class='kv-item'><span class='k'>Email</span><span class='v'>" + toText(row.Email) + "</span></div>" +
+                "<div class='kv-item'><span class='k'>Hire Date</span><span class='v'>" + toText(row.HireDate) + "</span></div>" +
+                "<div class='kv-item'><span class='k'>Salary</span><span class='v'>" + parseMoney(row.Salary) + "</span></div>" +
+                "<div class='kv-item'><span class='k'>Contract</span><span class='v'>" + normalizeFullTime(row.FullTime) + "</span></div>";
+        }
+
+        function renderNextSteps(row) {
+            if (!row || !row.NextSteps) {
+                byId("nextStepCard").className = "empty";
+                byId("nextStepCard").innerHTML = "No Next Steps available.";
+                return;
+            }
+
+            let nextStepData;
+            try {
+                nextStepData = parseNextStepsPayload(row.NextSteps);
+            } catch (err) {
+                byId("nextStepCard").className = "empty";
+                byId("nextStepCard").innerHTML = "Unable to parse NextSteps JSON.";
+                renderError("NextSteps JSON parse error: " + err.message);
+                return;
+            }
+            if (!nextStepData) {
+                byId("nextStepCard").className = "empty";
+                byId("nextStepCard").innerHTML = "No Next Steps available.";
+                return;
+            }
+
+            const nextSteps = Array.isArray(nextStepData) ? nextStepData : [nextStepData];
+            const stepItems = nextSteps.filter((item) => item && typeof item === "object");
+            if (stepItems.length === 0) {
+                byId("nextStepCard").className = "empty";
+                byId("nextStepCard").innerHTML = "No Next Steps available.";
+                return;
+            }
+            renderError("");
+            const html = stepItems.map((nextStep) => {
+                const taskTitle = getFieldCI(nextStep, ["NextStep", "nextstep", "task", "title", "description"], "No task title");
+                const status = getFieldCI(nextStep, ["Status", "status", "state"], "Not Started");
+                const priority = getFieldCI(nextStep, ["Priority", "priority", "importance"], "Low");
+                const dueDate = getFieldCI(nextStep, ["DueDate", "duedate", "due", "dateDue"], "N/A");
+                const taskId = getFieldCI(nextStep, ["ID", "id", "TaskID", "taskid"], "N/A");
+                const notes = String(getFieldCI(nextStep, ["Notes", "notes", "note"], "") || "").trim();
+                return (
+                    "<div class='next-step-item'>" +
+                        "<div class='next-step-title'>" + toText(taskTitle, "No task title") + "</div>" +
+                        "<div class='meta-strip'>" +
+                            statusBadge(status) +
+                            priorityChip(priority) +
+                            "<span class='tag'>Due " + toText(dueDate, "N/A") + "</span>" +
+                            "<span class='tag'>Task " + toText(taskId, "N/A") + "</span>" +
+                        "</div>" +
+                        (notes ? "<p class='next-step-notes'>" + notes + "</p>" : "") +
+                    "</div>"
+                );
+            }).join("");
+            byId("nextStepCard").className = "next-step-list";
+            byId("nextStepCard").innerHTML = html;
+        }
+
+        async function readProxyField(proxy, fieldName) {
+            try {
+                const value = proxy[fieldName];
+                return await Promise.resolve(value);
+            } catch (_ignored) {
+                return undefined;
+            }
+        }
+
+        async function fetchListRow() {
+            if (!window.chrome || !chrome.webview || !chrome.webview.hostObjects) {
+                return null;
+            }
+
+            const proxy = chrome.webview.hostObjects.listrow
+                || (chrome.webview.hostObjects.sync && chrome.webview.hostObjects.sync.listrow);
+            if (!proxy) return null;
+
+            const row = {};
+            for (const field of knownFields) {
+                row[field] = await readProxyField(proxy, field);
+            }
+            return row;
+        }
+
+        function signatureFor(row) {
+            if (!row) return "empty";
+            return knownFields.map((f) => String(row[f] ?? "")).join("|");
+        }
+
+        async function hydrate() {
+            try {
+                const row = await fetchListRow();
+                const sig = signatureFor(row);
+                if (sig === state.signature) return;
+                state.signature = sig;
+                renderEmployee(row);
+                renderNextSteps(row);
+            } catch (err) {
+                renderError("Refresh failed: " + err.message);
+            }
+        }
+
+        window.addEventListener("listrow-changed", hydrate);
+        document.addEventListener("DOMContentLoaded", () => {
+            hydrate();
+            window.setInterval(hydrate, state.pollMs);
+        });
+    </script>
+</body>
+</html>

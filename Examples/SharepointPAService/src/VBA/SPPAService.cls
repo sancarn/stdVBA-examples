@@ -14,6 +14,11 @@ Public Enum SharepointFileCheckInType
   CheckInOverwrite 'Overwrite the current version.
 End Enum
 
+Public Enum EEnsurePersonByType
+  EnsurePersonByName = 0
+  EnsurePersonByEmail
+End Enum
+
 Private Type TThis
   serviceWorker As String
   SiteURL As String
@@ -321,7 +326,7 @@ Public Function ListItemAttachmentDelete(ByVal itemID As Long, ByVal fileName As
   Dim API As String: API = InterpolateString(APITemplate, "list", This.listAPI, "itemID", itemID, "fileName", fileName)
   Dim headers As stdJSON: Set headers = stdJSON.CreateFromParams(eJSONObject, "Accept", "application/json;odata=verbose")
 
-  Set ListItemAttachmentUpdate = RawRequest(API, "DELETE", headers)
+  Set ListItemAttachmentDelete = RawRequest(API, "DELETE", headers)
 End Function
 
 
@@ -343,7 +348,7 @@ Public Function ListItemsFromODataQuery(ByVal query As String) As stdJSON
   Const APITemplate As String = "${list}/items?$filter=${oDataQuery}"
   Dim API As String: API = InterpolateString(APITemplate, "list", This.listAPI, "oDataQuery", query)
   Dim headers As stdJSON: Set headers = stdJSON.CreateFromParams(eJSONObject, "Accept", "application/json;odata=verbose")
-  Dim data As stdHTTP: Set data = RawRequest(API, "GET", headers).Await().ResponseMapped().item("d")
+  Dim data As Object: Set data = RawRequest(API, "GET", headers).Await().ResponseMapped().item("d")
   Dim result As stdJSON: Set result = stdJSON.Create(eJSONArray)
   Call result.Add(data.item("results"))
 
@@ -579,6 +584,28 @@ Public Function ListItemsDeleteBatch(ByVal deletionIDs As stdArray, Optional ByV
   
   Set ListItemsDeleteBatch = responses
   Set ListItemsDeleteBatch.responseMapper = stdCallback.CreateFromObjectMethod(Me, "protProcessBatchResponse").bind("delete", additions)
+End Function
+
+'Ensure a person exists in the sharepoint site
+'@param byType - The type of the person to ensure
+'@param name - The name of the person to ensure
+'@param email - The email of the person to ensure
+'@returns - HTTP response. Use `http.ResponseMapped()` to get returned data
+'@docs https://learn.microsoft.com/en-us/sharepoint/dev/sp-add-ins/working-with-people-and-groups-with-rest
+Public Function EnsurePersonExists(ByVal byType as EEnsurePersonByType, Optional ByVal name as string, Optional ByVal email As String) As stdHTTP
+  Dim APITemplate as string
+  select case byType
+    case EnsurePersonByName
+      APITemplate = "_api/web/EnsureUser('${name}')"
+    case EnsurePersonByEmail
+      APITemplate = "_api/web/EnsureUser(email='${email}')"
+    case else
+      Err.Raise vbObjectError + 1000, "SPPAService", "Invalid byType"
+  end select
+  Dim API As String: API = InterpolateString(APITemplate, "name", name, "email", email)
+  Dim headers As stdJSON: Set headers = stdJSON.CreateFromParams(eJSONObject, "Accept", "application/json;odata=verbose")
+  Set EnsurePersonExists = RawRequest(API, "POST", headers)
+  Set EnsurePersonExists.ResponseMapper = stdLambda.Create("if $2.status = 200 then $1.CreateFromString($2.ResponseText).item(""d"").item(""Id"") else null").Bind(stdJSON)
 End Function
 
 '@devNote ```HTTP

@@ -1,0 +1,11 @@
+ID,FirstName,LastName,Role,Department,Email,HireDate,Salary,FullTime
+E001,Alice,Morgan,Senior Software Engineer,Engineering,alice.morgan@example.com,12/03/2018,94000,TRUE
+E002,Brandon,Lee,DevOps Engineer,Engineering,brandon.lee@example.com,22/07/2019,88000,TRUE
+E003,Carol,Singh,Product Manager,Product,carol.singh@example.com,06/01/2020,105000,TRUE
+E004,Daniel,Ruiz,QA Engineer,Engineering,daniel.ruiz@example.com,15/11/2021,72000,TRUE
+E005,Emma,Patel,Data Analyst,Data,emma.patel@example.com,02/05/2022,68000,TRUE
+E006,Felix,O'Neal,HR Generalist,HR,felix.oneal@example.com,30/09/2017,63000,TRUE
+E007,Grace,Novak,UX Designer,Design,grace.novak@example.com,13/02/2023,70000,TRUE
+E008,Hector,Alvarez,Customer Success Rep,Customer Success,hector.alvarez@example.com,01/08/2020,55000,TRUE
+E009,Isla,Koh,Technical Writer,Documentation,isla.koh@example.com,20/06/2016,65000,TRUE
+E010,Jack,Müller,Intern - Engineering,Engineering,jack.muller@example.com,01/06/2024,22000,FALSE
