@@ -6,3 +6,7 @@
 *.cls text eol=crlf
 *.frm text eol=crlf
 *.vba text eol=crlf
+
+# Exclude JS/TS files from GitHub language stats.
+*.ts linguist-generated=true
+*.js linguist-generated=true
