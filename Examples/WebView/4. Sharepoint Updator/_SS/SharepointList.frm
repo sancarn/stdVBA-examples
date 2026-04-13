@@ -1,11 +1,11 @@
 VERSION 5.00
 Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} Sharepoint 
-   Caption         =   "Sharepoint"
+   Caption         =   "Sharepoint Updator"
    ClientHeight    =   7335
    ClientLeft      =   120
    ClientTop       =   465
    ClientWidth     =   6030
-   OleObjectBlob   =   "Sharepoint.frx":0000
+   OleObjectBlob   =   "SharepointList.frx":0000
    StartUpPosition =   1  'CenterOwner
 End
 Attribute VB_Name = "SharepointList"
@@ -57,28 +57,23 @@ Public Sub protInit( _
     ByVal site As String, _
     Optional ByVal listTitle As String = vbNullString, _
     Optional ByVal readyTimeoutMs As Long = DEFAULT_READY_TIMEOUT_MS)
-
-    If LenB(Trim$(site)) = 0 Then
-        Err.Raise 5, "SharepointList::protInit", "site cannot be blank"
-    End If
-
-    This.site = Trim$(site)
-    This.siteBase = InferSiteBase(This.site)
-    This.listTitle = Trim$(listTitle)
     This.readyTimeoutMs = IIf(readyTimeoutMs > 0, readyTimeoutMs, DEFAULT_READY_TIMEOUT_MS)
-    This.runtimeInjected = False
 
     Set This.wv = stdWebView.CreateFromUserform(Me)
-    Call This.wv.Navigate(This.site)
-    Call Me.Show(False)
+    Call NavigateToSite(site, listTitle)
+End Sub
 
-    If Not This.wv.WaitForDocumentReady(This.siteBase, This.readyTimeoutMs, READY_STABLE_MS, READY_POLL_MS) Then
-        Err.Raise 5, "SharepointList::protInit", "Timed out waiting for authenticated SharePoint page readiness"
+'Navigate the existing authenticated WebView session to another site/list URL.
+'@param site - Target SharePoint URL.
+'@param listTitle - Optional list title override for the new context.
+Public Sub NavigateToSite(ByVal site As String, Optional ByVal listTitle As String = vbNullString)
+    If LenB(Trim$(site)) = 0 Then
+        Err.Raise 5, "SharepointList::NavigateToSite", "site cannot be blank"
     End If
-
-    Call RefreshContextFromPage
-    Call EnsureRuntimeInjected
-    Me.Hide
+    If This.wv Is Nothing Then
+        Err.Raise 5, "SharepointList::NavigateToSite", "WebView session is not initialized. Call Create first."
+    End If
+    Call ActivateSiteContext(site, listTitle)
 End Sub
 
 'Release hosted WebView resources.
@@ -162,6 +157,24 @@ End Function
 Private Sub UserForm_Terminate()
     On Error Resume Next
     Call Quit
+End Sub
+
+Private Sub ActivateSiteContext(ByVal site As String, Optional ByVal listTitle As String = vbNullString)
+    This.site = Trim$(site)
+    This.siteBase = InferSiteBase(This.site)
+    This.listTitle = Trim$(listTitle)
+    This.runtimeInjected = False
+
+    Call This.wv.Navigate(This.site)
+    Call Me.Show(False)
+    If Not This.wv.WaitForDocumentReady(This.siteBase, This.readyTimeoutMs, READY_STABLE_MS, READY_POLL_MS) Then
+        Me.Hide
+        Err.Raise 5, "SharepointList::ActivateSiteContext", "Timed out waiting for authenticated SharePoint page readiness"
+    End If
+
+    Call RefreshContextFromPage
+    Call EnsureRuntimeInjected
+    Me.Hide
 End Sub
 
 Private Function ExecuteRuntimeMethod(ByVal methodName As String, Optional ByVal argsJson As String = "[]") As stdJSON
