@@ -1,14 +1,14 @@
 VERSION 5.00
-Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} SharepointAuthenticator
+Begin {C62A69F0-16DC-11CE-9E98-00AA00574A4F} stdSharepointAuthenticator
    Caption         =   "Sharepoint Authenticator"
    ClientHeight    =   7335
    ClientLeft      =   120
    ClientTop       =   465
    ClientWidth     =   6030
-   OleObjectBlob   =   "SharepointAuthenticator.frx":0000
+   OleObjectBlob   =   "stdSharepointAuthenticator.frx":0000
    StartUpPosition =   1  'CenterOwner
 End
-Attribute VB_Name = "SharepointAuthenticator"
+Attribute VB_Name = "stdSharepointAuthenticator"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -16,7 +16,7 @@ Attribute VB_Exposed = False
 
 '@module
 '@description A class used to authenticate to a SharePoint site.
-'@example `set auth = SharepointAuthenticator.Create("https://contoso.sharepoint.com")`
+'@example `set auth = stdSharepointAuthenticator.Create("https://contoso.sharepoint.com")`
 
 Option Explicit
 
@@ -39,13 +39,13 @@ Private This As TThis
 'No WebView is shown or initialized until protEnsureAuthenticated/stdICallable_Run is called.
 '@param SiteUrl - The SharePoint site URL to authenticate to.
 '@param ReadyTimeoutMs - The maximum time to wait for the SharePoint site to be ready.
-'@returns - A SharepointAuthenticator instance.
+'@returns - A stdSharepointAuthenticator instance.
 Public Function Create( _
     ByVal SiteUrl As String, _
-    Optional ByVal ReadyTimeoutMs As Long = DEFAULT_READY_TIMEOUT_MS) As SharepointAuthenticator
+    Optional ByVal ReadyTimeoutMs As Long = DEFAULT_READY_TIMEOUT_MS) As stdSharepointAuthenticator
 
-    Dim instance As SharepointAuthenticator
-    Set instance = New SharepointAuthenticator
+    Dim instance As stdSharepointAuthenticator
+    Set instance = New stdSharepointAuthenticator
     Call instance.protInit(SiteUrl, ReadyTimeoutMs)
     Set Create = instance
 End Function
@@ -59,7 +59,7 @@ Public Sub protInit( _
     Optional ByVal ReadyTimeoutMs As Long = DEFAULT_READY_TIMEOUT_MS)
 
     If LenB(Trim$(SiteUrl)) = 0 Then
-        Err.Raise 5, "SharepointAuthenticator::protInit", "SiteUrl cannot be blank"
+        Err.Raise 5, "stdSharepointAuthenticator::protInit", "SiteUrl cannot be blank"
     End If
     This.site = Trim$(SiteUrl)
     This.siteBase = InferSiteBase(This.site)
@@ -75,7 +75,7 @@ Public Sub protEnsureAuthenticated()
     Call This.wv.Navigate(This.site)
     If Not This.wv.WaitForDocumentReady(This.siteBase, This.ReadyTimeoutMs, READY_STABLE_MS, READY_POLL_MS) Then
         Me.Hide
-        Err.Raise 5, "SharepointAuthenticator::protEnsureAuthenticated", "Timed out waiting for SharePoint authentication"
+        Err.Raise 5, "stdSharepointAuthenticator::protEnsureAuthenticated", "Timed out waiting for SharePoint authentication"
     End If
     This.isSessionReady = True
     Me.Hide
@@ -150,17 +150,17 @@ Private Function stdICallable_RunEx(ByVal params As Variant) As Variant
     Dim cookieHeader As String
 
     If Not IsArray(params) Then
-        Err.Raise 5, "SharepointAuthenticator::stdICallable_RunEx", "Expected parameter array"
+        Err.Raise 5, "stdSharepointAuthenticator::stdICallable_RunEx", "Expected parameter array"
     End If
     If UBound(params) < 2 Then
-        Err.Raise 5, "SharepointAuthenticator::stdICallable_RunEx", "Expected (pHTTP, RequestMethod, sURL, ...)"
+        Err.Raise 5, "stdSharepointAuthenticator::stdICallable_RunEx", "Expected (pHTTP, RequestMethod, sURL, ...)"
     End If
 
     Set pHTTP = params(0)
     requestUrl = CStr(params(2))
     targetUrl = ResolveTargetUrl(requestUrl)
     If LenB(targetUrl) = 0 Then
-        Err.Raise 5, "SharepointAuthenticator::stdICallable_RunEx", "No request URL available for authentication"
+        Err.Raise 5, "stdSharepointAuthenticator::stdICallable_RunEx", "No request URL available for authentication"
     End If
 
     If Not This.isSessionReady Then
@@ -169,7 +169,7 @@ Private Function stdICallable_RunEx(ByVal params As Variant) As Variant
 
     cookieHeader = BuildCookieHeader(targetUrl)
     If LenB(cookieHeader) = 0 Then
-        Err.Raise 5, "SharepointAuthenticator::stdICallable_RunEx", "No cookies available for URL: " & targetUrl
+        Err.Raise 5, "stdSharepointAuthenticator::stdICallable_RunEx", "No cookies available for URL: " & targetUrl
     End If
 
     Call pHTTP.SetRequestHeader("Cookie", cookieHeader)
@@ -179,7 +179,7 @@ End Function
 '@param params - The parameters to bind to the authenticator.
 '@returns - The bound authenticator.
 Private Function stdICallable_Bind(ParamArray params() As Variant) As stdICallable
-    Err.Raise 5, "SharepointAuthenticator::stdICallable_Bind", "Bind is not implemented"
+    Err.Raise 5, "stdSharepointAuthenticator::stdICallable_Bind", "Bind is not implemented"
 End Function
 
 'Send a message to the authenticator.
@@ -191,7 +191,7 @@ Private Function stdICallable_SendMessage(ByVal sMessage As String, ByRef succes
     Select Case LCase$(Trim$(sMessage))
         Case "classname"
             success = True
-            stdICallable_SendMessage = "SharepointAuthenticator"
+            stdICallable_SendMessage = "stdSharepointAuthenticator"
         Case "obj"
             success = True
             Set stdICallable_SendMessage = Me

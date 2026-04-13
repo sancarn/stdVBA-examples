@@ -2,7 +2,7 @@ VERSION 1.0 CLASS
 BEGIN
   MultiUse = -1  'True
 END
-Attribute VB_Name = "SharepointList"
+Attribute VB_Name = "stdSharepointList"
 Attribute VB_GlobalNameSpace = False
 Attribute VB_Creatable = False
 Attribute VB_PredeclaredId = True
@@ -17,8 +17,8 @@ Attribute VB_Exposed = False
 'Dim auth As SharepointAuthenticator
 'Set auth = SharepointAuthenticator.Create("https://contoso.sharepoint.com")
 '
-'Dim risks As SharepointList
-'Set risks = SharepointList.Create( _
+'Dim risks As stdSharepointList
+'Set risks = stdSharepointList.Create( _
 '  "https://contoso.sharepoint.com/sites/Projects/Lists/Risks/AllItems.aspx", _
 '  auth _
 ')
@@ -103,14 +103,14 @@ Private Const TIMEOUT_MAX_MS As Long = 120000
 '@param ListUrl - List page URL (for example `/sites/X/Lists/MyList/AllItems.aspx`).
 '@param Authenticator as stdICallable<(HTTP: Object, RequestMethod: String, URL: String, ThreadingStyle: Long, options: Variant)=>Void> - Authenticator used by `stdHTTP`.
 '@param AutoDiscoverFields - If true, attempts to infer fields from SharePoint metadata.
-'@returns - A configured `SharepointList` instance.
+'@returns - A configured `stdSharepointList` instance.
 Public Function Create( _
   ByVal ListUrl As String, _
   ByVal Authenticator As stdICallable, _
   Optional ByVal AutoDiscoverFields As Boolean = False _
-) As SharepointList
-  Dim instance As SharepointList
-  Set instance = New SharepointList
+) As stdSharepointList
+  Dim instance As stdSharepointList
+  Set instance = New stdSharepointList
   Call instance.protInit(ListUrl, Authenticator, AutoDiscoverFields)
   Set Create = instance
 End Function
@@ -130,10 +130,10 @@ Public Sub protInit( _
   Dim relPath As String
 
   If LenB(Trim$(ListUrl)) = 0 Then
-    Err.Raise 5, "SharepointList::protInit", "ListUrl cannot be blank."
+    Err.Raise 5, "stdSharepointList::protInit", "ListUrl cannot be blank."
   End If
   If Authenticator Is Nothing Then
-    Err.Raise 5, "SharepointList::protInit", "Authenticator cannot be Nothing."
+    Err.Raise 5, "stdSharepointList::protInit", "Authenticator cannot be Nothing."
   End If
 
   Call ParseListUrl(ListUrl, siteUrl, listTitle, relPath)
@@ -160,7 +160,7 @@ End Sub
 
 'Clear all configured schema fields.
 '@returns - The same instance for chaining.
-Public Function FieldsClear() As SharepointList
+Public Function FieldsClear() As stdSharepointList
   This.FieldsCount = 0
   Erase This.Fields
   Set FieldsClear = Me
@@ -179,14 +179,14 @@ Public Function FieldsAdd( _
   Optional ByVal Nullable As Boolean = False, _
   Optional ByVal SelectProps As Variant, _
   Optional ByVal LookupField As String = vbNullString _
-) As SharepointList
+) As stdSharepointList
   Dim key As String
   Dim fieldDef As TFieldDef
   Dim idx As Long
 
   key = LCase$(Trim$(InternalName))
   If LenB(key) = 0 Then
-    Err.Raise 5, "SharepointList::FieldsAdd", "InternalName cannot be blank."
+    Err.Raise 5, "stdSharepointList::FieldsAdd", "InternalName cannot be blank."
   End If
 
   fieldDef.InternalName = Trim$(InternalName)
@@ -344,7 +344,7 @@ Public Function ItemAdd(ByVal Data As stdJSON, Optional ByVal ItemType As String
   Dim response As stdJSON
   Dim d As stdJSON
 
-  If Data Is Nothing Then Err.Raise 5, "SharepointList::ItemAdd", "Data cannot be Nothing."
+  If Data Is Nothing Then Err.Raise 5, "stdSharepointList::ItemAdd", "Data cannot be Nothing."
 
   Set postData = TransformSetterData(Data)
   If LenB(ItemType) = 0 Then ItemType = GetListItemEntityType()
@@ -353,7 +353,7 @@ Public Function ItemAdd(ByVal Data As stdJSON, Optional ByVal ItemType As String
   Set response = RequestJson(ListItemsEndpoint(vbNullString), "POST", postData.ToString(), Empty, SP_JSON_VERBOSE)
   Set d = JsonGetObject(response, "d")
   If d Is Nothing Or Not d.Exists("Id") Then
-    Err.Raise 5, "SharepointList::ItemAdd", "SharePoint did not return created item id."
+    Err.Raise 5, "stdSharepointList::ItemAdd", "SharePoint did not return created item id."
   End If
   ItemAdd = CLng(d("Id"))
 End Function
@@ -368,7 +368,7 @@ Public Function ItemSet(ByVal ItemId As Variant, ByVal Data As stdJSON) As stdJS
   Dim req As stdHTTP
   Dim out As stdJSON
 
-  If Data Is Nothing Then Err.Raise 5, "SharepointList::ItemSet", "Data cannot be Nothing."
+  If Data Is Nothing Then Err.Raise 5, "stdSharepointList::ItemSet", "Data cannot be Nothing."
 
   Set patchData = TransformSetterData(Data)
   SetMetadataType patchData, GetListItemEntityType()
@@ -399,7 +399,7 @@ Public Function GetOrCreateUserId(ByVal UserText As String) As Long
   Dim d As stdJSON
 
   key = LCase$(Trim$(UserText))
-  If LenB(key) = 0 Then Err.Raise 5, "SharepointList::GetOrCreateUserId", "UserText cannot be blank."
+  If LenB(key) = 0 Then Err.Raise 5, "stdSharepointList::GetOrCreateUserId", "UserText cannot be blank."
 
   If This.UserIdCache.Exists(key) Then
     GetOrCreateUserId = CLng(This.UserIdCache(key))
@@ -410,7 +410,7 @@ Public Function GetOrCreateUserId(ByVal UserText As String) As Long
   Set json = RequestJson(This.SiteUrl & "/_api/web/ensureuser", "POST", body, Empty, SP_JSON_VERBOSE)
   Set d = JsonGetObject(json, "d")
   If d Is Nothing Or Not d.Exists("Id") Then
-    Err.Raise 5, "SharepointList::GetOrCreateUserId", "SharePoint ensureuser did not return Id."
+    Err.Raise 5, "stdSharepointList::GetOrCreateUserId", "SharePoint ensureuser did not return Id."
   End If
 
   This.UserIdCache.Add key, CLng(d("Id"))
@@ -853,7 +853,7 @@ Private Function SendRequest( _
   Set options = stdHTTP.CreateOptions(body, headers, timeoutMS:=TIMEOUT_MAX_MS )
 
   Set req = stdHTTP.Create(url, method, HTTPSync, options, This.Authenticator)
-  EnsureSuccess req, "SharepointList::SendRequest"
+  EnsureSuccess req, "stdSharepointList::SendRequest"
   Set SendRequest = req
 End Function
 
@@ -1203,7 +1203,7 @@ Private Function GetListItemEntityType() As String
   Set json = RequestJson(ListEndpoint("?$select=ListItemEntityTypeFullName"), "GET")
   Set d = JsonGetObject(json, "d")
   If d Is Nothing Or Not d.Exists("ListItemEntityTypeFullName") Then
-    Err.Raise 5, "SharepointList::GetListItemEntityType", "ListItemEntityTypeFullName was not found."
+    Err.Raise 5, "stdSharepointList::GetListItemEntityType", "ListItemEntityTypeFullName was not found."
   End If
   This.ListItemEntityType = CStr(d("ListItemEntityTypeFullName"))
   GetListItemEntityType = This.ListItemEntityType
@@ -1231,7 +1231,7 @@ Private Function ParseODataBatchResponse(ByVal body As String) As Collection
 
   Set ParseODataBatchResponse = New Collection
   boundary = ExtractBatchBoundary(body)
-  If LenB(boundary) = 0 Then Err.Raise 5, "SharepointList::ParseODataBatchResponse", "No batch boundary found."
+  If LenB(boundary) = 0 Then Err.Raise 5, "stdSharepointList::ParseODataBatchResponse", "No batch boundary found."
 
   parts = Split(body, boundary)
   Set re = CreateObject("VBScript.RegExp")
@@ -1681,7 +1681,7 @@ Private Sub ParseListUrl(ByVal raw As String, ByRef siteUrl As String, ByRef lis
   If Right$(cleaned, 1) = "/" Then cleaned = Left$(cleaned, Len(cleaned) - 1)
 
   listsPos = InStr(1, LCase$(cleaned), "/lists/", vbTextCompare)
-  If listsPos <= 0 Then Err.Raise 5, "SharepointList::ParseListUrl", "ListUrl must contain `/Lists/<ListName>`."
+  If listsPos <= 0 Then Err.Raise 5, "stdSharepointList::ParseListUrl", "ListUrl must contain `/Lists/<ListName>`."
 
   siteUrl = Left$(cleaned, listsPos - 1)
   afterLists = Mid$(cleaned, listsPos + Len("/Lists/"))
@@ -1704,7 +1704,7 @@ Private Sub EnsureListDisplayTitle()
 
   resolvedTitle = ResolveListDisplayTitle()
   If LenB(Trim$(resolvedTitle)) = 0 Then
-    Err.Raise 5, "SharepointList::EnsureListDisplayTitle", "Unable to resolve list display title from list URL."
+    Err.Raise 5, "stdSharepointList::EnsureListDisplayTitle", "Unable to resolve list display title from list URL."
   End If
 
   This.ListTitle = resolvedTitle
@@ -1721,7 +1721,7 @@ Private Function ResolveListDisplayTitle() As String
   Set d = JsonGetObject(json, "d")
 
   If d Is Nothing Or Not d.Exists("Title") Then
-    Err.Raise 5, "SharepointList::ResolveListDisplayTitle", "SharePoint did not return a list Title."
+    Err.Raise 5, "stdSharepointList::ResolveListDisplayTitle", "SharePoint did not return a list Title."
   End If
 
   ResolveListDisplayTitle = CStr(d("Title"))

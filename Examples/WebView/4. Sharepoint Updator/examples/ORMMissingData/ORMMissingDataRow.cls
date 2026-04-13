@@ -312,7 +312,7 @@ End Function
 
 Public Function ExecuteCollection(ByVal rows As Collection) As stdJSON
   Dim payloads As stdJSON
-  Dim list As SharepointList
+  Dim list As stdSharepointList
   Dim item As Variant
   Dim row As ORMMissingDataRow
   Dim commitPayload As stdJSON
@@ -347,7 +347,7 @@ End Function
 ' Instance payload builders
 '-------------------------
 
-Friend Function protBuildCommitPayload(ByVal list As SharepointList) As stdJSON
+Friend Function protBuildCommitPayload(ByVal list As stdSharepointList) As stdJSON
   Dim out As stdJSON
   Dim payload As stdJSON
   Dim data As stdJSON
@@ -433,7 +433,7 @@ End Function
 ' SharePoint helpers
 '-------------------------
 
-Private Function ResolveItemIdByRiskID(ByVal list As SharepointList, ByVal riskID As String) As Long
+Private Function ResolveItemIdByRiskID(ByVal list As stdSharepointList, ByVal riskID As String) As Long
   Dim inplaceQuery As String
   Dim rows As stdJSON
   Dim candidateRow As stdJSON
@@ -475,10 +475,10 @@ Private Function ResolveItemIdByRiskID(ByVal list As SharepointList, ByVal riskI
   ResolveItemIdByRiskID = CLng(matchedRow("Id"))
 End Function
 
-Private Function CreateListClient() As SharepointList
-  Dim list As SharepointList
+Private Function CreateListClient() As stdSharepointList
+  Dim list As stdSharepointList
 
-  Set list = SharepointList.Create(ORM_LIST_URL, ContosoAuth.Authenticator)
+  Set list = stdSharepointList.Create(ORM_LIST_URL, ContosoAuth.Authenticator)
   Call list.FieldsAdd("Id", SharePointFieldNumber)
   Call list.FieldsAdd("Title", SharePointFieldText, True)
   Call list.FieldsAdd("AssetType", SharePointFieldChoice, True)
