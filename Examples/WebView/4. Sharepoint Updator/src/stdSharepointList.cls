@@ -97,6 +97,7 @@ Private Const SP_JSON_LIGHT As String = "application/json"
 Private Const BATCH_CHUNK_SIZE As Long = 750
 Private Const DIGEST_EXPIRY_BUFFER_SECONDS As Long = 60
 Private Const TIMEOUT_MAX_MS As Long = 120000
+Private Const PEOPLE_PICKER_MAX_RESULTS_CAP As Long = 200
 
 'Create a SharePoint list client from a SharePoint list URL.
 '@constructor
@@ -343,6 +344,7 @@ Public Function ItemAdd(ByVal Data As stdJSON, Optional ByVal ItemType As String
   Dim postData As stdJSON
   Dim response As stdJSON
   Dim d As stdJSON
+  Dim headers As Variant
 
   If Data Is Nothing Then Err.Raise 5, "stdSharepointList::ItemAdd", "Data cannot be Nothing."
 
@@ -350,7 +352,9 @@ Public Function ItemAdd(ByVal Data As stdJSON, Optional ByVal ItemType As String
   If LenB(ItemType) = 0 Then ItemType = GetListItemEntityType()
   SetMetadataType postData, ItemType
 
-  Set response = RequestJson(ListItemsEndpoint(vbNullString), "POST", postData.ToString(), Empty, SP_JSON_VERBOSE)
+  headers = BuildDefaultHeaders(True, SP_JSON_VERBOSE)
+  stdHTTP.SetHeader headers, "X-RequestDigest", GetFormDigest()
+  Set response = RequestJson(ListItemsEndpoint(vbNullString), "POST", postData.ToString(), headers, SP_JSON_VERBOSE)
   Set d = JsonGetObject(response, "d")
   If d Is Nothing Or Not d.Exists("Id") Then
     Err.Raise 5, "stdSharepointList::ItemAdd", "SharePoint did not return created item id."
@@ -374,6 +378,7 @@ Public Function ItemSet(ByVal ItemId As Variant, ByVal Data As stdJSON) As stdJS
   SetMetadataType patchData, GetListItemEntityType()
 
   headers = BuildDefaultHeaders(True, SP_JSON_VERBOSE)
+  stdHTTP.SetHeader headers, "X-RequestDigest", GetFormDigest()
   stdHTTP.SetHeader headers, "IF-MATCH", "*"
   stdHTTP.SetHeader headers, "X-HTTP-Method", "MERGE"
 
@@ -397,6 +402,7 @@ Public Function GetOrCreateUserId(ByVal UserText As String) As Long
   Dim body As String
   Dim json As stdJSON
   Dim d As stdJSON
+  Dim headers As Variant
 
   key = LCase$(Trim$(UserText))
   If LenB(key) = 0 Then Err.Raise 5, "stdSharepointList::GetOrCreateUserId", "UserText cannot be blank."
@@ -407,7 +413,9 @@ Public Function GetOrCreateUserId(ByVal UserText As String) As Long
   End If
 
   body = "{""logonName"":" & JsonStringLiteral(UserText) & "}"
-  Set json = RequestJson(This.SiteUrl & "/_api/web/ensureuser", "POST", body, Empty, SP_JSON_VERBOSE)
+  headers = BuildDefaultHeaders(True, SP_JSON_VERBOSE)
+  stdHTTP.SetHeader headers, "X-RequestDigest", GetFormDigest()
+  Set json = RequestJson(This.SiteUrl & "/_api/web/ensureuser", "POST", body, headers, SP_JSON_VERBOSE)
   Set d = JsonGetObject(json, "d")
   If d Is Nothing Or Not d.Exists("Id") Then
     Err.Raise 5, "stdSharepointList::GetOrCreateUserId", "SharePoint ensureuser did not return Id."
@@ -850,7 +858,7 @@ Private Function SendRequest( _
   headers = BuildDefaultHeaders(True, contentType)
   MergeHeaderArray headers, extraHeaders
 
-  Set options = stdHTTP.CreateOptions(body, headers, timeoutMS:=TIMEOUT_MAX_MS )
+  options = stdHTTP.CreateOptions(body, headers, timeoutMS:=TIMEOUT_MAX_MS )
 
   Set req = stdHTTP.Create(url, method, HTTPSync, options, This.Authenticator)
   EnsureSuccess req, "stdSharepointList::SendRequest"
