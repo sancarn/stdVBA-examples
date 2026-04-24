@@ -394,6 +394,37 @@ Public Function ItemSet(ByVal ItemId As Variant, ByVal Data As stdJSON) As stdJS
   Set ItemSet = out
 End Function
 
+'Get the currently authenticated SharePoint user's email address.
+'@returns - Current user email.
+Public Function GetCurrentUserEmail() As String
+  Dim json As stdJSON
+  Dim d As stdJSON
+  Dim loginName As String
+  Dim claimSepPos As Long
+
+  Set json = RequestJson(This.SiteUrl & "/_api/web/currentuser?$select=Email,EMail,LoginName", "GET")
+  Set d = JsonGetObject(json, "d")
+  If d Is Nothing Then
+    Err.Raise 5, "stdSharepointList::GetCurrentUserEmail", "SharePoint currentuser response did not contain 'd'."
+  End If
+
+  If d.Exists("Email") Then GetCurrentUserEmail = Trim$(CStr(d("Email")))
+  If LenB(GetCurrentUserEmail) = 0 And d.Exists("EMail") Then GetCurrentUserEmail = Trim$(CStr(d("EMail")))
+  If LenB(GetCurrentUserEmail) > 0 Then Exit Function
+
+  If d.Exists("LoginName") Then
+    loginName = Trim$(CStr(d("LoginName")))
+    claimSepPos = InStrRev(loginName, "|")
+    If claimSepPos > 0 Then loginName = Mid$(loginName, claimSepPos + 1)
+    If InStr(1, loginName, "@", vbTextCompare) > 0 Then
+      GetCurrentUserEmail = loginName
+      Exit Function
+    End If
+  End If
+
+  Err.Raise 5, "stdSharepointList::GetCurrentUserEmail", "SharePoint currentuser did not return an email. Use LoginName/UPN explicitly."
+End Function
+
 'Resolve/ensure a SharePoint user id from login/email text.
 '@param UserText - User login, email, or principal text.
 '@returns - SharePoint user id.
@@ -423,6 +454,91 @@ Public Function GetOrCreateUserId(ByVal UserText As String) As Long
 
   This.UserIdCache.Add key, CLng(d("Id"))
   GetOrCreateUserId = CLng(d("Id"))
+End Function
+
+'Search SharePoint users by display/login/email text using People Picker.
+'@param query - Search text. Case-insensitive contains matching is enforced post-filter.
+'@param maxResults - Maximum number of candidates to return (clamped to safe bounds).
+'@returns as stdJSON<Array> - Normalized user candidate objects.
+Public Function SearchUsersByName(ByVal query As String, Optional ByVal maxResults As Long = 20) As stdJSON
+  Dim normalizedQuery As String
+  Dim requestedMax As Long
+  Dim payload As stdJSON
+  Dim queryParams As stdJSON
+  Dim meta As stdJSON
+  Dim headers As Variant
+  Dim response As stdJSON
+  Dim rawResults As String
+  Dim rows As stdJSON
+  Dim outArr As stdJSON
+  Dim one As stdJSON
+  Dim i As Long
+  Dim uniqueKey As String
+  Dim seen As Object
+
+  normalizedQuery = Trim$(query)
+  If LenB(normalizedQuery) = 0 Then
+    Err.Raise 5, "stdSharepointList::SearchUsersByName", "query cannot be blank."
+  End If
+
+  requestedMax = maxResults
+  If requestedMax < 1 Then requestedMax = 1
+  If requestedMax > PEOPLE_PICKER_MAX_RESULTS_CAP Then requestedMax = PEOPLE_PICKER_MAX_RESULTS_CAP
+
+  Set payload = stdJSON.Create(eJSONObject)
+  Set queryParams = stdJSON.Create(eJSONObject)
+  Set meta = stdJSON.Create(eJSONObject)
+  meta.Add "type", "SP.UI.ApplicationPages.ClientPeoplePickerQueryParameters"
+  queryParams.Add "__metadata", meta
+  queryParams.Add "QueryString", normalizedQuery
+  queryParams.Add "MaximumEntitySuggestions", requestedMax
+  queryParams.Add "AllowEmailAddresses", True
+  queryParams.Add "AllUrlZones", True
+  queryParams.Add "PrincipalType", 1
+  queryParams.Add "PrincipalSource", 15
+  payload.Add "queryParams", queryParams
+
+  headers = BuildDefaultHeaders(True, SP_JSON_VERBOSE)
+  stdHTTP.SetHeader headers, "X-RequestDigest", GetFormDigest()
+  Set response = RequestJson( _
+    This.SiteUrl & "/_api/SP.UI.ApplicationPages.ClientPeoplePickerWebServiceInterface.clientPeoplePickerSearchUser", _
+    "POST", _
+    payload.ToString(), _
+    headers, _
+    SP_JSON_VERBOSE _
+  )
+
+  Set outArr = stdJSON.Create(eJSONArray)
+  rawResults = ExtractPeoplePickerResultJson(response)
+  If LenB(rawResults) = 0 Then
+    Set SearchUsersByName = outArr
+    Exit Function
+  End If
+
+  Set rows = TryParseJsonArray(rawResults)
+  If rows Is Nothing Then
+    Set SearchUsersByName = outArr
+    Exit Function
+  End If
+
+  Set seen = NewDictionary(vbTextCompare)
+  For i = 1 To rows.Length
+    If IsObject(rows(i)) And TypeOf rows(i) Is stdJSON Then
+      Set one = NormalizePeoplePickerCandidate(rows(i))
+      If Not one Is Nothing Then
+        If PeoplePickerCandidateMatches(one, normalizedQuery) Then
+          uniqueKey = BuildPeoplePickerCandidateKey(one)
+          If Not seen.Exists(uniqueKey) Then
+            seen.Add uniqueKey, True
+            outArr.Add one
+            If outArr.Length >= requestedMax Then Exit For
+          End If
+        End If
+      End If
+    End If
+  Next
+
+  Set SearchUsersByName = outArr
 End Function
 
 'Batch update list items.
@@ -1553,6 +1669,95 @@ Private Function ResolveFieldTypeByName(ByVal key As String) As Long
   ResolveFieldTypeByName = SharePointFieldText
 End Function
 
+'Extract raw JSON array text from People Picker service response.
+Private Function ExtractPeoplePickerResultJson(ByVal payload As stdJSON) As String
+  Dim d As stdJSON
+
+  If payload Is Nothing Then Exit Function
+  Set d = JsonGetObject(payload, "d")
+  If Not d Is Nothing Then
+    If d.Exists("ClientPeoplePickerSearchUser") Then
+      ExtractPeoplePickerResultJson = CStr(d("ClientPeoplePickerSearchUser"))
+      Exit Function
+    End If
+  End If
+  If payload.Exists("ClientPeoplePickerSearchUser") Then
+    ExtractPeoplePickerResultJson = CStr(payload("ClientPeoplePickerSearchUser"))
+  End If
+End Function
+
+'Normalize one People Picker entity into stable user candidate shape.
+Private Function NormalizePeoplePickerCandidate(ByVal src As stdJSON) As stdJSON
+  Dim out As stdJSON
+  Dim entityData As stdJSON
+  Dim displayText As String
+  Dim email As String
+  Dim loginName As String
+  Dim userId As Long
+  Dim principalType As Long
+
+  If src Is Nothing Then Exit Function
+
+  displayText = JsonGetString(src, "DisplayText")
+  loginName = JsonGetString(src, "Key")
+  If LenB(loginName) = 0 Then loginName = JsonGetString(src, "LoginName")
+  email = JsonGetString(src, "Email")
+  If LenB(email) = 0 Then email = JsonGetString(src, "EMail")
+
+  Set entityData = JsonGetObject(src, "EntityData")
+  If Not entityData Is Nothing Then
+    If LenB(email) = 0 Then email = JsonGetString(entityData, "Email")
+    If LenB(email) = 0 Then email = JsonGetString(entityData, "EMail")
+    If LenB(loginName) = 0 Then loginName = JsonGetString(entityData, "PrincipalName")
+    If LenB(loginName) = 0 Then loginName = JsonGetString(entityData, "AccountName")
+    If LenB(displayText) = 0 Then displayText = JsonGetString(entityData, "Title")
+
+    principalType = VariantToLong(entityData, "PrincipalType")
+    If principalType > 0 And principalType <> 1 Then Exit Function
+
+    userId = VariantToLong(entityData, "SPUserID")
+    If userId = 0 Then userId = VariantToLong(entityData, "PrincipalId")
+  End If
+
+  If LenB(displayText) = 0 Then displayText = loginName
+  If LenB(displayText) = 0 Then displayText = email
+  If LenB(displayText) = 0 Then Exit Function
+
+  Set out = stdJSON.Create(eJSONObject)
+  out.Add "DisplayText", displayText
+  out.Add "Email", email
+  out.Add "LoginName", loginName
+  If userId > 0 Then out.Add "UserId", userId
+
+  Set NormalizePeoplePickerCandidate = out
+End Function
+
+'Check whether normalized candidate contains query in searchable fields.
+Private Function PeoplePickerCandidateMatches(ByVal candidate As stdJSON, ByVal query As String) As Boolean
+  If candidate Is Nothing Then Exit Function
+  If InStr(1, JsonGetString(candidate, "DisplayText"), query, vbTextCompare) > 0 Then
+    PeoplePickerCandidateMatches = True
+    Exit Function
+  End If
+  If InStr(1, JsonGetString(candidate, "LoginName"), query, vbTextCompare) > 0 Then
+    PeoplePickerCandidateMatches = True
+    Exit Function
+  End If
+  If InStr(1, JsonGetString(candidate, "Email"), query, vbTextCompare) > 0 Then
+    PeoplePickerCandidateMatches = True
+  End If
+End Function
+
+'Build a stable key used to deduplicate candidate rows.
+Private Function BuildPeoplePickerCandidateKey(ByVal candidate As stdJSON) As String
+  Dim key As String
+  key = LCase$(Trim$(JsonGetString(candidate, "LoginName")))
+  If LenB(key) = 0 Then key = LCase$(Trim$(JsonGetString(candidate, "Email")))
+  If LenB(key) = 0 Then key = LCase$(Trim$(JsonGetString(candidate, "DisplayText")))
+  If LenB(key) = 0 Then key = "#unknown"
+  BuildPeoplePickerCandidateKey = key
+End Function
+
  'Build default schema-driven `$select` and `$expand` fragments.
 Private Sub BuildDefaultSelectExpand(ByRef selectCsv As String, ByRef expandCsv As String)
   Dim selectParts As Collection
@@ -1801,6 +2006,24 @@ Private Function JsonGetObject(ByVal parent As stdJSON, ByVal key As String) As 
   End If
 End Function
 
+'Get a child value as a trimmed string, returning empty when missing.
+Private Function JsonGetString(ByVal parent As stdJSON, ByVal key As String) As String
+  If parent Is Nothing Then Exit Function
+  If Not parent.Exists(key) Then Exit Function
+  If IsObject(parent(key)) Then Exit Function
+  If IsNull(parent(key)) Then Exit Function
+  JsonGetString = Trim$(CStr(parent(key)))
+End Function
+
+'Convert a named JSON property to Long safely, returning 0 when absent/invalid.
+Private Function VariantToLong(ByVal parent As stdJSON, ByVal key As String) As Long
+  If parent Is Nothing Then Exit Function
+  If Not parent.Exists(key) Then Exit Function
+  If IsObject(parent(key)) Then Exit Function
+  If Not IsNumeric(parent(key)) Then Exit Function
+  VariantToLong = CLng(parent(key))
+End Function
+
  'Add or set a key/value on a JSON object.
 Private Sub JsonAddOrSet(ByVal parent As stdJSON, ByVal key As String, ByVal v As Variant)
   If parent Is Nothing Then Exit Sub
@@ -1826,6 +2049,19 @@ Private Function JsonClone(ByVal source As stdJSON) As stdJSON
   Else
     Set JsonClone = stdJSON.CreateFromVariant(source.ToVBObject())
   End If
+End Function
+
+'Attempt to parse JSON text into a JSON array.
+Private Function TryParseJsonArray(ByVal jsonText As String) As stdJSON
+  jsonText = Trim$(jsonText)
+  If LenB(jsonText) = 0 Then Exit Function
+
+  On Error Resume Next
+  Set TryParseJsonArray = stdJSON.CreateFromString(jsonText)
+  On Error GoTo 0
+
+  If TryParseJsonArray Is Nothing Then Exit Function
+  If TryParseJsonArray.JsonType <> eJSONArray Then Set TryParseJsonArray = Nothing
 End Function
 
  'Normalize select-props input into a collection of strings.
