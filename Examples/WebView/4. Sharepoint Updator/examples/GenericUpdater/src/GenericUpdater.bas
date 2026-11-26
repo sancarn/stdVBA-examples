@@ -135,8 +135,6 @@ Public Function UpdateList( _
   '6. Validate individual rows; build create/update payloads for valid rows
   Dim updatePayloads As stdJSON: Set updatePayloads = stdJSON.Create(eJSONArray)
   Dim createPayloads As stdJSON: Set createPayloads = stdJSON.Create(eJSONArray)
-  Dim seenIds As Object: Set seenIds = CreateObject("Scripting.Dictionary")
-  seenIds.compareMode = vbTextCompare
   Dim validRowIndexes As Collection: Set validRowIndexes = New Collection
   Dim updateRowById As Object: Set updateRowById = CreateObject("Scripting.Dictionary")
   updateRowById.compareMode = vbTextCompare
@@ -159,7 +157,7 @@ Public Function UpdateList( _
         rowOp, _
         columns, _
         colCount, _
-        seenIds, _
+        updateRowById, _
         itemId, _
         rowIssues _
       )
@@ -184,7 +182,7 @@ Public Function UpdateList( _
         payload.Add "data", dataObj
         updatePayloads.Add payload
         Dim idKey As String: idKey = CStr(itemId)
-        If Not updateRowById.Exists(idKey) Then updateRowById.Add idKey, rowIndex
+        updateRowById.Add idKey, rowIndex
       End If
     End If
   Next
@@ -753,7 +751,7 @@ Private Sub ValidateRow( _
   ByVal rowOp As ERowOp, _
   ByRef columns() As TColumnMap, _
   ByVal colCount As Long, _
-  ByVal seenIds As Object, _
+  ByVal updateRowById As Object, _
   ByRef itemId As Long, _
   ByVal issues As Collection _
 )
@@ -782,11 +780,10 @@ Private Sub ValidateRow( _
     End If
 
     Dim idKey As String: idKey = CStr(itemId)
-    If seenIds.Exists(idKey) Then
+    If updateRowById.Exists(idKey) Then
       issues.Add "Duplicate ID " & idKey
       Exit Sub
     End If
-    seenIds.Add idKey, True
   End If
 
   Dim i As Long

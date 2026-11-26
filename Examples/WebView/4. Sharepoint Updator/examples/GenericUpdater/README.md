@@ -50,7 +50,7 @@ Safety notes:
 ### Update
 
 - Requires a numeric positive `ID`.
-- Duplicate IDs in the same run: first row may update; later duplicates fail validation.
+- Duplicate IDs in the same run: the first valid row for an ID is queued. Later rows with that ID fail validation.
 - Only non-blank, non-`null` cells are PATCHed; blank cells leave existing values alone.
 
 ### Create
