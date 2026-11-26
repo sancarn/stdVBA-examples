@@ -7,3 +7,6 @@
 
 - 2026-11-26 `GenericUpdater` FEATURE - Recover item IDs after create timeouts using an optional `__create_recovery_key__` text field.
 - 2026-11-26 `GenericUpdater` FIX - Exclude rows with unresolved person or multi-person fields and submit the remaining creates and updates. A rejected row leaves its ID available for a later valid update.
+- 2026-11-26 `stdSharepointAuthenticator` FEATURE - Prefill the Microsoft sign-in account field from the current classic Outlook profile.
+- 2026-11-26 `GenericUpdater` FIX - Clear the output sheet at the start of every upload.
+- 2026-11-26 `stdSharepointAuthenticator` BREAKING - Projects that import the form separately could previously compile it with the older stdWebView alone for browser hosting. When replacing the form, also replace stdWebView.cls and import stdOutlook.cls from this example's libs folder. The distributed workbook includes both classes.

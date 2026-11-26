@@ -13,7 +13,7 @@ Range-driven Create/Update tool for arbitrary SharePoint lists. Point an Excel t
 1. Set named ranges `SITE_URL` and `LIST_NAME` on `shInput`.
 2. Run `mainFetchFields` to ensure `Type`, `ID`, and writable field columns exist on `DataToUpdate`.
 3. Fill rows (`Type` = `Create` or `Update`).
-4. Run `mainRunGenericUpdater`. Results dump to `shOutput!A1`.
+4. Run `mainRunGenericUpdater`. Each run clears the output sheet before validation or sign-in. On the Microsoft sign-in page, the updater fills an empty account field when classic Outlook supplies a current email address. You can edit the address before continuing. Results dump to `shOutput!A1`.
 
 ```vb
 Dim results As Variant: results = GenericUpdater.UpdateList(SiteURL, ListTitle, PatchData)
