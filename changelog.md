@@ -11,3 +11,4 @@
 - 2026-11-26 `GenericUpdater` FIX - Clear the output sheet at the start of every upload.
 - 2026-11-26 `stdSharepointAuthenticator` BREAKING - Projects that import the form separately could previously compile it with the older stdWebView alone for browser hosting. When replacing the form, also replace stdWebView.cls and import stdOutlook.cls from this example's libs folder. The distributed workbook includes both classes.
 - 2026-11-26 `GenericUpdater` FEATURE - Resolve distinct email addresses in SharePoint batches and report lookup errors on the affected rows.
+- 2026-11-26 `GenericUpdater` NOTE - Add a Documentation sheet to the workbook covering setup, cell values, field types, timeouts and the create recovery key.
