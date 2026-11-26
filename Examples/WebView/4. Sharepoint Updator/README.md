@@ -78,6 +78,6 @@ Range-driven Create/Update for arbitrary lists (`UpdateList`, `DumpResults`, `En
 
 ## Requirements
 
-- stdVBA dependencies used by this project (including `stdHTTP`, `stdJSON`, `stdICallable`, and `stdWebView`).
+- stdVBA dependencies used by this project (including `stdHTTP`, `stdJSON`, `stdICallable`, `stdWebView`, and the bundled `stdOutlook` class for optional sign-in prefill).
 - A SharePoint tenant and permissions for the target list/site.
 - Correct site/list URLs and field internal names in your consuming code.

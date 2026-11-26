@@ -15,6 +15,8 @@ Attribute VB_PredeclaredId = True
 Attribute VB_Exposed = False
 
 '@module
+'@aidate 2026-11-26
+'@aidesc AI added Outlook sign-in address prefill.
 '@description A class used to authenticate to a SharePoint site.
 '@example `set auth = stdSharepointAuthenticator.Create("https://contoso.sharepoint.com")`
 
@@ -32,6 +34,8 @@ Private Type TThis
     siteBase As String
     readyTimeoutMs As Long
     isSessionReady As Boolean
+    checkedOutlook As Boolean
+    loginScript As String
 End Type
 Private This As TThis
 
@@ -72,13 +76,48 @@ End Sub
 Public Sub protEnsureAuthenticated()
     If This.wv Is Nothing Then Set This.wv = stdWebView.CreateFromUserform(Me)
     Call Me.Show(False)
+    This.checkedOutlook = False
+    This.loginScript = vbNullString
     Call This.wv.Navigate(This.site)
-    If Not This.wv.WaitForDocumentReady(This.siteBase, This.ReadyTimeoutMs, READY_STABLE_MS, READY_POLL_MS) Then
+    If Not This.wv.WaitForDocumentReady(This.siteBase, This.ReadyTimeoutMs, READY_STABLE_MS, READY_POLL_MS, Me) Then
         Me.Hide
         Err.Raise 5, "stdSharepointAuthenticator::protEnsureAuthenticated", "Timed out waiting for SharePoint authentication"
     End If
     This.isSessionReady = True
     Me.Hide
+End Sub
+
+ 'Look up the profile once per sign-in and allow manual entry when classic Outlook is unavailable.
+Private Sub PrefillMicrosoftLogin(ByVal pageUrl As String)
+    Const workOrigin As String = "https://login.microsoftonline.com"
+    Const personalOrigin As String = "https://login.live.com"
+    Dim origin As String
+    If Left$(LCase$(pageUrl), Len(workOrigin) + 1) = workOrigin & "/" Then
+        origin = workOrigin
+    ElseIf Left$(LCase$(pageUrl), Len(personalOrigin) + 1) = personalOrigin & "/" Then
+        origin = personalOrigin
+    Else
+        Exit Sub
+    End If
+
+    On Error GoTo unavailable
+    If Not This.checkedOutlook Then
+        This.checkedOutlook = True
+        Dim profile As stdOutlook: Set profile = stdOutlook.Create()
+        Dim email As String: email = Trim$(profile.CurrentUserEmail)
+        If LenB(email) = 0 Then Exit Sub
+        Dim address As stdJSON: Set address = stdJSON.Create(eJSONArray)
+        address.Add email
+        This.loginScript = "const f=document.querySelector('input[name=loginfmt],input#i0116');" & _
+            "if(!f || !['text','email','tel'].includes(f.type) || f.disabled || f.readOnly || !f.getClientRects().length) return;" & _
+            "if(document.__stdVbaLoginHandled) return; document.__stdVbaLoginHandled=true;" & _
+            "if(f.value) return; f.value=" & address.ToString() & "[0];" & _
+            "f.dispatchEvent(new Event('input',{bubbles:true}));f.dispatchEvent(new Event('change',{bubbles:true}));"
+    End If
+    If LenB(This.loginScript) > 0 Then
+        This.wv.JavaScriptRun "(()=>{if(location.origin!=='" & origin & "')return;" & This.loginScript & "})()"
+    End If
+unavailable:
 End Sub
 
 'Release hosted WebView resources.
@@ -151,6 +190,12 @@ Private Function stdICallable_RunEx(ByVal params As Variant) As Variant
 
     If Not IsArray(params) Then
         Err.Raise 5, "stdSharepointAuthenticator::stdICallable_RunEx", "Expected parameter array"
+    End If
+    If UBound(params) = 0 Then
+        If VarType(params(0)) = vbString Then
+            PrefillMicrosoftLogin CStr(params(0))
+            Exit Function
+        End If
     End If
     If UBound(params) < 2 Then
         Err.Raise 5, "stdSharepointAuthenticator::stdICallable_RunEx", "Expected (pHTTP, RequestMethod, sURL, ...)"

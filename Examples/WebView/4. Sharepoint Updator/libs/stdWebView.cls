@@ -966,12 +966,14 @@ End Function
 '@param timeoutMs - Max wait time in milliseconds.
 '@param stableMs - Consecutive milliseconds condition must remain true before success.
 '@param pollMs - Poll interval in milliseconds.
+'@param onPoll - Optional callable receiving the current source URL on each poll.
 '@returns - `True` when ready condition is satisfied within timeout, else `False`.
 Public Function WaitForDocumentReady( _
     ByVal urlPrefix As String, _
     Optional ByVal timeoutMs As Long = 120000, _
     Optional ByVal stableMs As Long = 1000, _
-    Optional ByVal pollMs As Long = 200) As Boolean
+    Optional ByVal pollMs As Long = 200, _
+    Optional ByVal onPoll As stdICallable = Nothing) As Boolean
 
     Dim requiredPrefix As String
     Dim startedAt As Double
@@ -991,7 +993,9 @@ Public Function WaitForDocumentReady( _
     stableStart = -1#
 
     Do
-        currentUrl = UrlWaitPrefixNormalize(Source)
+        currentUrl = Source
+        If Not onPoll Is Nothing Then onPoll.Run currentUrl
+        currentUrl = UrlWaitPrefixNormalize(currentUrl)
         hasPrefix = (LenB(requiredPrefix) = 0) Or (Left$(currentUrl, Len(requiredPrefix)) = requiredPrefix)
 
         If hasPrefix Then
