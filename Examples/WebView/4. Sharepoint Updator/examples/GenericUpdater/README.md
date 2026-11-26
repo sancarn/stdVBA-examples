@@ -108,7 +108,7 @@ Not accepted by GenericUpdater validation:
 - Display name only (no `@`)
 - Arbitrary login strings without `@` (unless numeric)
 
-The email must be resolvable in that tenant/site. Unknown emails fail at resolve/`ensureuser` time (row or batch error).
+The email must be resolvable in that tenant/site. An unresolved email fails its input row, including when it appears in a multi-person field. The result includes the column, email and SharePoint error. Other valid rows are submitted.
 
 Create and Update use the same person resolution path.
 
