@@ -69,6 +69,14 @@ Public Enum SharePointFieldType
   SharePointFieldFile = 9
 End Enum
 
+#If Mac Then
+  Private Declare PtrSafe Sub uuid_generate_random Lib "/usr/lib/libSystem.B.dylib" (ByRef firstByte As Byte)
+#ElseIf VBA7 Then
+  Private Declare PtrSafe Function CoCreateGuid Lib "ole32" (ByRef firstByte As Byte) As Long
+#Else
+  Private Declare Function CoCreateGuid Lib "ole32" (ByRef firstByte As Byte) As Long
+#End If
+
 Private Type TFieldDef
   InternalName As String
   FieldType As SharePointFieldType
@@ -292,7 +300,7 @@ Public Function FieldsFetchSchema() As stdJSON
   Dim j As Long
 
   api = ListEndpoint( _
-    "/fields?$select=Title,InternalName,TypeAsString,Required,ReadOnlyField,Hidden,MaxLength,Choices,AllowMultipleValues" _
+    "/fields?$select=Title,InternalName,EntityPropertyName,TypeAsString,Required,ReadOnlyField,Hidden,MaxLength,Choices,AllowMultipleValues" _
   )
   Set json = RequestJson(api, "GET")
   Set d = JsonGetObject(json, "d")
@@ -325,6 +333,7 @@ Public Function FieldsFetchSchema() As stdJSON
     Set one = stdJSON.Create(eJSONObject)
     one.Add "Title", JsonGetString(row, "Title")
     one.Add "InternalName", CStr(row("InternalName"))
+    one.Add "EntityPropertyName", JsonGetString(row, "EntityPropertyName")
     one.Add "TypeAsString", JsonGetString(row, "TypeAsString")
     one.Add "Required", JsonGetBoolean(row, "Required")
     one.Add "ReadOnlyField", JsonGetBoolean(row, "ReadOnlyField")
@@ -808,8 +817,9 @@ End Function
 'Batch create list items.
 '@param BatchItems as stdJSON<Array<stdJSON>> - Create payloads.
 '@param BatchUuid - Optional batch guid.
+'@param RecoveryProperty - Optional REST text property for a per-create GUID. On timeout a unique match returns its id and verified=True.
 '@returns as stdJSON<Array> - Per-item result objects.
-Public Function BatchItemsCreate(ByVal BatchItems As stdJSON, Optional ByVal BatchUuid As String = vbNullString) As stdJSON
+Public Function BatchItemsCreate(ByVal BatchItems As stdJSON, Optional ByVal BatchUuid As String = vbNullString, Optional ByVal RecoveryProperty As String = vbNullString) As stdJSON
   Dim chunked As Collection
   Dim chunk As stdJSON
   Dim i As Long
@@ -845,8 +855,13 @@ Public Function BatchItemsCreate(ByVal BatchItems As stdJSON, Optional ByVal Bat
     lineItems.Add "Content-Type: multipart/mixed; boundary=changeset_" & BatchUuid
     lineItems.Add vbNullString
 
+    Dim keys As Collection: Set keys = New Collection
     For j = 1 To chunk.Length
       Set op = TransformSetterData(chunk(j))
+      If LenB(RecoveryProperty) > 0 Then
+        keys.Add NewRecoveryKey()
+        op.Add RecoveryProperty, keys(j)
+      End If
       SetMetadataType op, itemType
 
       lineItems.Add "--changeset_" & BatchUuid
@@ -867,28 +882,85 @@ Public Function BatchItemsCreate(ByVal BatchItems As stdJSON, Optional ByVal Bat
     headers = BuildDefaultHeaders(True, "multipart/mixed; boundary=""batch_" & BatchUuid & """")
     stdHTTP.SetHeader headers, "X-RequestDigest", digest
     Dim timedOut As Boolean
-    Set req = PostChangeset(JoinCollection(lineItems, vbCrLf), headers, False, timedOut)
-    Set parseRows = ParseODataBatchResponse(CStr(req.ResponseText))
-    If parseRows.count <> chunk.Length Then
-      Err.Raise 5, "stdSharepointList::BatchItemsCreate", "Unexpected create response count. Check for existing items before retrying."
+    Set req = PostChangeset(JoinCollection(lineItems, vbCrLf), headers, keys.count > 0, timedOut)
+    If Not timedOut Then
+      Set parseRows = ParseODataBatchResponse(CStr(req.ResponseText))
+      If parseRows.count <> chunk.Length Then
+        Err.Raise 5, "stdSharepointList::BatchItemsCreate", "Unexpected create response count. Check for existing items before retrying."
+      End If
     End If
-    For j = 1 To parseRows.count
-      Set one = parseRows(j)
+    Dim pending As Object: Set pending = NewDictionary(vbTextCompare)
+    For j = 1 To chunk.Length
       Set out = stdJSON.Create(eJSONObject)
       out.Add "type", "create"
-      out.Add "httpStatus", one("statusCode")
-      If IsObject(one("json")) Then
-        out.Add "data", one("json")
-        Set d = JsonGetObject(one("json"), "d")
-        If Not d Is Nothing Then If d.Exists("Id") Then out.Add "id", CLng(d("Id"))
+      Dim status As Long: status = 0
+      If Not timedOut Then
+        Set one = parseRows(j)
+        status = one("statusCode")
+        If IsObject(one("json")) Then
+          out.Add "data", one("json")
+          Set d = JsonGetObject(one("json"), "d")
+          If Not d Is Nothing Then If d.Exists("Id") Then out.Add "id", CLng(d("Id"))
+        End If
       End If
+      If keys.count > 0 And (timedOut Or status = 408 Or status = 504) Then
+        out.Add "timeoutReason", "Create timed out. Outcome unknown. Recovery key " & keys(j)
+        pending.Add keys(j), out
+      End If
+      out.Add "httpStatus", status
       out.Add "payload", chunk(j)
       results.Add out
     Next
+    Dim filters As Collection: Set filters = New Collection
+    Dim key As Variant
+    For Each key In pending.Keys
+      filters.Add RecoveryProperty & " eq '" & key & "'"
+      If filters.count = 25 Then
+        RecoverCreates RecoveryProperty, filters, pending
+        Set filters = New Collection
+      End If
+    Next
+    If filters.count > 0 Then RecoverCreates RecoveryProperty, filters, pending
   Next
 
   Set BatchItemsCreate = results
 End Function
+
+ 'Look up timed-out creates. Confirm only unique matches after reading every page.
+Private Sub RecoverCreates(ByVal field As String, ByVal filters As Collection, ByVal pending As Object)
+  On Error GoTo unconfirmed
+  Dim url As String: url = ListItemsEndpoint("?$select=Id," & stdHTTP.URIEncode(field) & _
+    "&$filter=" & stdHTTP.URIEncode(JoinCollection(filters, " or ")))
+  Dim ids As Object: Set ids = NewDictionary(vbTextCompare)
+  Do While LenB(url) > 0
+    Dim page As stdJSON: Set page = RequestJson(url, "GET")
+    Dim d As stdJSON: Set d = page("d")
+    Dim rows As stdJSON: Set rows = d("results")
+    Dim i As Long, key As Variant
+    For i = 1 To rows.Length
+      key = CStr(rows(i)(field))
+      If ids.Exists(key) Then
+        ids(key) = 0
+      Else
+        ids.Add key, CLng(rows(i)("Id"))
+      End If
+    Next
+    url = JsonGetString(d, "__next")
+  Loop
+  For Each key In ids.Keys
+    If pending.Exists(key) Then
+      Dim result As stdJSON: Set result = pending(key)
+      If ids(key) > 0 Then
+        result.Add "id", ids(key)
+        result.Add "verified", True
+      Else
+        result("timeoutReason") = "Multiple items match create recovery key " & key & ". Outcome unknown."
+      End If
+    End If
+  Next
+unconfirmed:
+  'An incomplete lookup leaves the original timeout and key on each affected result.
+End Sub
 
 'Batch delete list items.
 '@param ItemIds as stdJSON<Array<long>> - Item ids to delete.
@@ -2494,6 +2566,32 @@ Private Function NewDictionary(Optional ByVal compareMode As Long = vbBinaryComp
   On Error Resume Next
   NewDictionary.compareMode = compareMode
   On Error GoTo 0
+End Function
+
+ 'Generate an OS-backed identifier that stays unique across concurrent uploaders.
+Private Function NewRecoveryKey() As String
+  Dim bytes(0 To 15) As Byte
+  #If Mac Then
+    uuid_generate_random bytes(0)
+  #Else
+    If CoCreateGuid(bytes(0)) <> 0 Then Err.Raise 5, "NewRecoveryKey", "Could not generate a create recovery GUID."
+  #End If
+  Dim i As Long, idx As Long, value As String
+  For i = 0 To 15
+    idx = i
+    #If Not Mac Then
+      Select Case i
+        Case 0 To 3: idx = 3 - i
+        Case 4 To 5: idx = 9 - i
+        Case 6 To 7: idx = 13 - i
+      End Select
+    #End If
+    Select Case i
+      Case 4, 6, 8, 10: value = value & "-"
+    End Select
+    value = value & Right$("0" & Hex$(bytes(idx)), 2)
+  Next
+  NewRecoveryKey = LCase$(value)
 End Function
 
  'Generate a GUID string suitable for batch/change set ids.

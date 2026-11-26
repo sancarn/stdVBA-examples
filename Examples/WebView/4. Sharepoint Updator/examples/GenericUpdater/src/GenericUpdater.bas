@@ -33,6 +33,7 @@ Attribute VB_Name = "GenericUpdater"
 Option Explicit
 
 Private Const BATCH_SIZE As Long = 500
+Private Const RECOVERY_KEY As String = "__create_recovery_key__"
 Private Const CLEAR_TOKEN As String = "null"
 
 Private Enum ERowOp
@@ -105,13 +106,14 @@ Public Function UpdateList( _
 
   Dim fields() As TFieldSchema
   Dim fieldCount As Long: fieldCount = 0
-  Call ParseSchema(schemaJson, fields, fieldCount)
+  Dim recovery As stdJSON
+  Call ParseSchema(schemaJson, fields, fieldCount, recovery)
 
   '5. Verify field names exist (writable Title/InternalName match). ID and Type are reserved.
   Dim unmatched As Collection: Set unmatched = New Collection
   Dim columns() As TColumnMap
   Dim colCount As Long: colCount = 0
-  Call MapColumns(patchValues, idCol, typeCol, fields, fieldCount, columns, colCount, unmatched)
+  Call MapColumns(patchValues, idCol, typeCol, fields, fieldCount, columns, colCount, unmatched, recovery)
 
   If unmatched.count > 0 Then
     Dim failReason As String: failReason = BuildUnmatchedReason(unmatched, ListTitle)
@@ -196,7 +198,13 @@ Public Function UpdateList( _
     Call RunUpdateBatches(list, updatePayloads, updateRowById, results, processedBatches, totalBatches)
   End If
   If createPayloads.Length > 0 Then
-    Call RunCreateBatches(list, createPayloads, createRowIndexes, results, processedBatches, totalBatches)
+    Dim recoveryProperty As String
+    If Not recovery Is Nothing Then
+      If LCase$(NzString(recovery, "TypeAsString")) = "text" And Not NzBool(recovery, "ReadOnlyField") Then
+        If IsNull(recovery("MaxLength")) Or Val(NzString(recovery, "MaxLength")) >= 36 Then recoveryProperty = NzString(recovery, "EntityPropertyName")
+      End If
+    End If
+    Call RunCreateBatches(list, createPayloads, createRowIndexes, results, processedBatches, totalBatches, recoveryProperty)
   End If
 
   'Any valid rows still unmarked after batching
@@ -252,7 +260,8 @@ Public Function EnsureTableFields( _
 
   Dim fields() As TFieldSchema
   Dim fieldCount As Long: fieldCount = 0
-  Call ParseSchema(schemaJson, fields, fieldCount)
+  Dim recovery As stdJSON
+  Call ParseSchema(schemaJson, fields, fieldCount, recovery)
 
   Dim added As Long: added = 0
 
@@ -371,7 +380,8 @@ Private Sub RunCreateBatches( _
   ByVal createRowIndexes As Collection, _
   ByRef results As Variant, _
   ByRef processedBatches As Long, _
-  ByVal totalBatches As Long _
+  ByVal totalBatches As Long, _
+  ByVal recoveryProperty As String _
 )
   Dim chunkStart As Long: chunkStart = 1
   Do While chunkStart <= payloads.Length
@@ -391,7 +401,7 @@ Private Sub RunCreateBatches( _
     Dim errText As String: errText = vbNullString
     Dim batchOut As stdJSON: Set batchOut = Nothing
     On Error Resume Next
-    Set batchOut = list.BatchItemsCreate(chunk)
+    Set batchOut = list.BatchItemsCreate(chunk, RecoveryProperty:=recoveryProperty)
     If Err.Number <> 0 Then
       errText = Err.Description
       If Err.source = "stdSharepointList::BatchWriteTimeout" Then errText = "Create timed out. Outcome unknown. Check for an existing item before retrying."
@@ -417,13 +427,15 @@ Private Sub RunCreateBatches( _
         Dim one As stdJSON: Set one = batchOut(resultIdx)
         Dim httpStatus As Long: httpStatus = 0
         If one.Exists("httpStatus") Then httpStatus = CLng(one("httpStatus"))
-        If httpStatus >= 200 And httpStatus < 300 Then
+        If (httpStatus >= 200 And httpStatus < 300) Or one.Exists("verified") Then
           results(rowIndex + 1, 2) = "Success"
           results(rowIndex + 1, 3) = vbNullString
           If one.Exists("id") Then results(rowIndex + 1, 1) = one("id")
         Else
           results(rowIndex + 1, 2) = "Failure"
-          If httpStatus = 408 Or httpStatus = 504 Then
+          If one.Exists("timeoutReason") Then
+            results(rowIndex + 1, 3) = one("timeoutReason")
+          ElseIf httpStatus = 408 Or httpStatus = 504 Then
             results(rowIndex + 1, 3) = "Create timed out. Outcome unknown. Check for an existing item before retrying."
           Else
             results(rowIndex + 1, 3) = ExtractBatchError(one, httpStatus)
@@ -493,7 +505,7 @@ Private Sub ResolveRowOp( _
   End Select
 End Sub
 
-Private Sub ParseSchema(ByVal schemaJson As stdJSON, ByRef fields() As TFieldSchema, ByRef fieldCount As Long)
+Private Sub ParseSchema(ByVal schemaJson As stdJSON, ByRef fields() As TFieldSchema, ByRef fieldCount As Long, ByRef recovery As stdJSON)
   fieldCount = 0
   Erase fields
   If schemaJson Is Nothing Or schemaJson.Length = 0 Then Exit Sub
@@ -506,6 +518,12 @@ Private Sub ParseSchema(ByVal schemaJson As stdJSON, ByRef fields() As TFieldSch
     Dim row As stdJSON: Set row = schemaJson(i)
     If Not row.Exists("InternalName") Then GoTo ContinueParse
 
+    If StrComp(NzString(row, "Title"), RECOVERY_KEY, vbTextCompare) = 0 Or _
+       StrComp(NzString(row, "InternalName"), RECOVERY_KEY, vbTextCompare) = 0 Then
+      If Not recovery Is Nothing Then Err.Raise 5, "GenericUpdater", "Ambiguous create recovery field."
+      Set recovery = row
+      GoTo ContinueParse
+    End If
     fieldCount = fieldCount + 1
     fields(fieldCount).Title = Trim$(CStr(NzString(row, "Title")))
     fields(fieldCount).InternalName = Trim$(CStr(NzString(row, "InternalName")))
@@ -600,7 +618,8 @@ Private Sub MapColumns( _
   ByVal fieldCount As Long, _
   ByRef columns() As TColumnMap, _
   ByRef colCount As Long, _
-  ByVal unmatched As Collection _
+  ByVal unmatched As Collection, _
+  ByVal recovery As stdJSON _
 )
   colCount = 0
   Erase columns
@@ -612,6 +631,12 @@ Private Sub MapColumns( _
     Dim header As String: header = Trim$(CStr(patchValues(1, c)))
     If LenB(header) = 0 Then GoTo ContinueCol
 
+    If StrComp(header, RECOVERY_KEY, vbTextCompare) = 0 Then GoTo ContinueCol
+    If Not recovery Is Nothing Then
+      If StrComp(header, recovery("InternalName"), vbTextCompare) = 0 Or _
+         StrComp(header, recovery("Title"), vbTextCompare) = 0 Or _
+         StrComp(header, recovery("EntityPropertyName"), vbTextCompare) = 0 Then GoTo ContinueCol
+    End If
     Dim schemaIndex As Long: schemaIndex = FindWritableFieldIndex(header, fields, fieldCount)
     If schemaIndex = 0 Then
       unmatched.Add header

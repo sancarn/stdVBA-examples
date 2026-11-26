@@ -4,9 +4,9 @@ Range-driven Create/Update tool for arbitrary SharePoint lists. Point an Excel t
 
 ## Files
 
-- `src/GenericUpdater.bas` — core API
-- `src/mMain.bas` — demo macros (`mainRunGenericUpdater`, `mainFetchFields`)
-- `Generic Sharepoint Updator.xlsm` — workbook with `DataToUpdate` ListObject, `SITE_URL`, `LIST_NAME`
+- `src/GenericUpdater.bas` â€” core API
+- `src/mMain.bas` â€” demo macros (`mainRunGenericUpdater`, `mainFetchFields`)
+- `Generic Sharepoint Updator.xlsm` â€” workbook with `DataToUpdate` ListObject, `SITE_URL`, `LIST_NAME`
 
 ## Quick start
 
@@ -35,8 +35,8 @@ All other headers must match a writable list field by **Title** or **InternalNam
 
 | Cell value | Meaning |
 | --- | --- |
-| Empty / blank | **Skip** — omit from the payload. Update leaves the existing SharePoint value. Create omits the field. |
-| `null` (trim, case-insensitive) | **Clear** — send JSON `null` (person/lookup clear `FieldId`; multi-person/multi-choice send empty results). |
+| Empty / blank | **Skip** â€” omit from the payload. Update leaves the existing SharePoint value. Create omits the field. |
+| `null` (trim, case-insensitive) | **Clear** â€” send JSON `null` (person/lookup clear `FieldId`; multi-person/multi-choice send empty results). |
 | Any other value | Validate and include in the write. |
 
 Safety notes:
@@ -85,7 +85,7 @@ Accepted cell text (case-insensitive): `TRUE` / `FALSE`, `1` / `0`, `Yes` / `No`
 
 ### Choice
 
-- Must exactly match one of the list’s choice values (when choices are returned by schema).
+- Must exactly match one of the listâ€™s choice values (when choices are returned by schema).
 - Match is case-insensitive for dictionary lookup.
 
 ### MultiChoice
@@ -144,7 +144,7 @@ Create and Update use the same person resolution path.
 2. `auth.protEnsureAuthenticated`
 3. `stdSharepointList.CreateFromTitle(SiteURL, ListTitle, auth)`
 4. `list.FieldsFetchSchema`
-5. Verify field names — mismatch → fail all rows, no write
+5. Verify field names â€” mismatch â†’ fail all rows, no write
 6. Validate each row; invalid rows are logged and skipped
 7. `BatchItemsCreate` / `BatchItemsSet` in 500-item chunks for valid rows
 
@@ -159,8 +159,14 @@ Create and Update use the same person resolution path.
 - Create Success rows get the new SharePoint Id in `ID`.
 - Per-item HTTP failures include SharePoint `error.message.value` when present.
 - On an update timeout (including an HTTP 408 or 504 for one item), Excel reads the affected IDs in groups of 25. A row shows **Success** if every submitted field is already at its requested value. This confirms the observed state, including values that already matched before the run. Omitted fields do not participate. If the row is missing, still differs, or cannot be read, its **FailureReason** records the timeout. SharePoint may still finish the write later.
-- The updater never resends a timed-out write. If a create response is lost, Excel has no assigned ID to check. Verify whether the item exists before retrying. Other HTTP and validation errors remain failures.
+- The updater never resends a timed-out write. For lists with a create recovery key, Excel can look up the assigned ID after a create timeout. For other lists, check whether the item exists before retrying. Other HTTP and validation errors remain failures.
 - Every update changeset repeats its first PATCH at the end for SharePoint compatibility. Excel consumes one HTTP result per original item and ignores the additional workaround response when present. Creates send each item once.
+
+## Optional create recovery
+
+To enable recovery on a list, add a writable **Single line of text** column named `__create_recovery_key__` with room for a 36-character GUID. Indexing this column helps lookups on large lists. Fetch Fields omits it from the input table. The uploader also ignores values in an existing input column for this field.
+
+During each create, Excel sends a new GUID in the field and keeps its association with the input row for the current run. After an entire create request times out, or an individual item returns HTTP 408 or 504, Excel looks up the affected keys. Exactly one matching item gives that row **Success** and its SharePoint ID. A missing or ambiguous match, or an unsuccessful lookup, gives **Failure** with an unknown-outcome reason and the key for a later lookup. SharePoint may still complete a write after the lookup. Check unresolved keys before starting another upload, which generates fresh keys.
 
 ## Test batched person resolution
 
@@ -179,6 +185,6 @@ The script sends the two `ensureuser` POSTs together, prints the raw multipart r
 ## Tips
 
 - Prefer `mainFetchFields` before filling data so person/date/choice columns get the correct field-type transforms.
-- For people, use work email or site user id — not display name.
-- For lookups, use the related item’s numeric Id.
+- For people, use work email or site user id â€” not display name.
+- For lookups, use the related itemâ€™s numeric Id.
 - Leave cells blank to skip; type `null` only when you intentionally want to clear.
