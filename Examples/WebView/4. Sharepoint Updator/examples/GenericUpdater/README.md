@@ -6,7 +6,7 @@ Range-driven Create/Update tool for arbitrary SharePoint lists. Point an Excel t
 
 - `src/GenericUpdater.bas` â€” core API
 - `src/mMain.bas` â€” demo macros (`mainRunGenericUpdater`, `mainFetchFields`)
-- `Generic Sharepoint Updator.xlsm` â€” workbook with `DataToUpdate` ListObject, `SITE_URL`, `LIST_NAME`
+- `Generic Sharepoint Updator.xlsm` â€” workbook with `DataToUpdate` ListObject, `SITE_URL`, `LIST_NAME`, and a `Documentation` sheet for users
 
 ## Quick start
 
