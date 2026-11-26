@@ -171,7 +171,8 @@ Public Function UpdateList( _
       nextRow = nextRow + 1
     Loop
 
-    list.BatchEnsureUsers logins, people
+    Dim retryable As Collection: Set retryable = New Collection
+    list.BatchEnsureUsers logins, people, retryable
     Dim candidate As Variant
     For Each candidate In candidates
       rowIndex = candidate(0)
@@ -195,6 +196,10 @@ Public Function UpdateList( _
           updateRowById.Add CStr(itemId), rowIndex
         End If
       End If
+    Next
+    Dim login As Variant
+    For Each login In retryable
+      people.Remove login
     Next
   Loop
 

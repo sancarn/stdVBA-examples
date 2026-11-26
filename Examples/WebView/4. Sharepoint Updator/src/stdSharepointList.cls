@@ -620,17 +620,17 @@ Public Function GetOrCreateUserId(ByVal UserText As String) As Long
 End Function
 
  'Resolve the uploader's distinct logins into site user IDs or per-login error messages.
-Friend Sub BatchEnsureUsers(ByVal logins As Collection, ByVal people As Object)
+Friend Sub BatchEnsureUsers(ByVal logins As Collection, ByVal people As Object, ByVal retryable As Collection)
   Const groupSize As Long = 50
   Dim first As Long, last As Long
   For first = 1 To logins.count Step groupSize
     last = first + groupSize - 1
     If last > logins.count Then last = logins.count
-    EnsureUserGroup logins, first, last, people
+    EnsureUserGroup logins, first, last, people, retryable
   Next
 End Sub
 
-Private Sub EnsureUserGroup(ByVal logins As Collection, ByVal first As Long, ByVal last As Long, ByVal people As Object)
+Private Sub EnsureUserGroup(ByVal logins As Collection, ByVal first As Long, ByVal last As Long, ByVal people As Object, ByVal retryable As Collection)
   On Error GoTo groupFailed
   Dim batch As String: batch = "batch_" & GenerateUuid()
   Dim lines As Collection: Set lines = New Collection
@@ -663,17 +663,21 @@ Private Sub EnsureUserGroup(ByVal logins As Collection, ByVal first As Long, ByV
   Dim parts As Collection: Set parts = ParseODataBatchResponse(CStr(req.ResponseText))
   If parts.count <> last - first + 1 Then Err.Raise 5, "BatchEnsureUsers", "Unexpected ensureuser response count."
   For i = first To last
-    people(logins(i)) = EnsureUserResult(parts(i - first + 1))
+    Dim definitive As Boolean
+    people(logins(i)) = EnsureUserResult(parts(i - first + 1), definitive)
+    If Not definitive Then retryable.Add logins(i)
   Next
   Exit Sub
 groupFailed:
   Dim detail As String: detail = "User lookup batch failed: " & Err.Description
   For i = first To last
     people(logins(i)) = detail
+    retryable.Add logins(i)
   Next
 End Sub
 
-Private Function EnsureUserResult(ByVal part As Object) As Variant
+Private Function EnsureUserResult(ByVal part As Object, ByRef definitive As Boolean) As Variant
+  definitive = False
   On Error GoTo invalidResult
   Dim status As Long: status = part("statusCode")
   Dim json As stdJSON: Set json = part("json")
@@ -681,10 +685,12 @@ Private Function EnsureUserResult(ByVal part As Object) As Variant
     Dim id As Long: id = VariantToLong(JsonGetObject(json, "d"), "Id")
     If id <= 0 Then GoTo invalidResult
     EnsureUserResult = id
+    definitive = True
   Else
     Dim detail As String
     detail = JsonGetString(JsonGetObject(JsonGetObject(json, "error"), "message"), "value")
     EnsureUserResult = Trim$("HTTP " & status & " " & part("statusText") & " " & detail)
+    definitive = (status = 400)
   End If
   Exit Function
 invalidResult:
