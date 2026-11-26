@@ -158,7 +158,15 @@ Create and Update use the same person resolution path.
 - Input row order is preserved.
 - Create Success rows get the new SharePoint Id in `ID`.
 - Per-item HTTP failures include SharePoint `error.message.value` when present.
-- A whole batch HTTP failure marks that chunk’s rows as Failure and continues with later chunks.
+- On an update timeout (including an HTTP 408 or 504 for one item), Excel reads the affected IDs in groups of 25. A row shows **Success** if every submitted field is already at its requested value. This confirms the observed state, including values that already matched before the run. Omitted fields do not participate. If the row is missing, still differs, or cannot be read, its **FailureReason** records the timeout. SharePoint may still finish the write later.
+- The updater never resends a timed-out write. If a create response is lost, Excel has no assigned ID to check. Verify whether the item exists before retrying. Other HTTP and validation errors remain failures.
+- Every update changeset repeats its first PATCH at the end for SharePoint compatibility. Excel consumes one HTTP result per original item and ignores the additional workaround response when present. Creates send each item once.
+
+## Test batched person resolution
+
+Open a signed-in page on the target SharePoint site. In its browser developer console, run the contents of [tests/ensureuser-batch.js](tests/ensureuser-batch.js). Enter the site URL and two distinct, valid test accounts. Use accounts new to the site if you want to exercise first-time resolution. Like ordinary `ensureuser`, this can register those accounts with the site. The test does not change list items.
+
+The script sends the two `ensureuser` POSTs together, prints the raw multipart response, then makes two individual calls for comparison. A pass requires two successful item responses with distinct IDs matching the individual controls. An outer HTTP 200 alone is insufficient. The uploader continues to resolve people individually.
 
 ## `EnsureTableFields` / `mainFetchFields`
 

@@ -1,0 +1,6 @@
+# Changelog
+
+- 2026-11-26 `GenericUpdater` FIX - Verify requested update values by ID after a write timeout and report ambiguous creates.
+- 2026-11-26 `stdSharepointList` FIX - Read actual multipart operation results and preserve the extra PATCH used by the SharePoint workaround.
+- 2026-11-26 `GenericUpdater` DEV - Add a two-user SharePoint batch experiment with individual controls.
+- 2026-11-26 `Repository` DEV - Adopt the stdVBA agent guidance, including reuse of one hidden Excel instance per test run and focus recovery after VBA error dialogs.

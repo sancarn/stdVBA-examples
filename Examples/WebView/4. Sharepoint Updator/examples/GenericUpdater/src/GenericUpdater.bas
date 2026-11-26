@@ -1,6 +1,8 @@
 Attribute VB_Name = "GenericUpdater"
 
 '@module
+'@aidate 2026-11-26
+'@aidesc AI added timeout result handling.
 '@description Range-based generic SharePoint list updater / creator.
 'Call order:
 '  1. stdSharepointAuthenticator.Create(SiteURL)
@@ -316,7 +318,7 @@ Private Sub RunUpdateBatches( _
     Dim errText As String: errText = vbNullString
     Dim batchOut As stdJSON: Set batchOut = Nothing
     On Error Resume Next
-    Set batchOut = list.BatchItemsSet(chunk)
+    Set batchOut = list.BatchItemsSet(chunk, VerifyTimeouts:=True)
     If Err.Number <> 0 Then
       errText = Err.Description
       If LenB(errText) = 0 Then errText = "Batch update request failed."
@@ -344,12 +346,16 @@ Private Sub RunUpdateBatches( _
           rowIndex = CLng(updateRowById(idKey))
           Dim httpStatus As Long: httpStatus = 0
           If one.Exists("httpStatus") Then httpStatus = CLng(one("httpStatus"))
-          If httpStatus >= 200 And httpStatus < 300 Then
+          If (httpStatus >= 200 And httpStatus < 300) Or one.Exists("verified") Then
             results(rowIndex + 1, 2) = "Success"
             results(rowIndex + 1, 3) = vbNullString
           Else
             results(rowIndex + 1, 2) = "Failure"
-            results(rowIndex + 1, 3) = ExtractBatchError(one, httpStatus)
+            If one.Exists("timeoutReason") Then
+              results(rowIndex + 1, 3) = one("timeoutReason")
+            Else
+              results(rowIndex + 1, 3) = ExtractBatchError(one, httpStatus)
+            End If
           End If
         End If
       Next
@@ -388,6 +394,7 @@ Private Sub RunCreateBatches( _
     Set batchOut = list.BatchItemsCreate(chunk)
     If Err.Number <> 0 Then
       errText = Err.Description
+      If Err.source = "stdSharepointList::BatchWriteTimeout" Then errText = "Create timed out. Outcome unknown. Check for an existing item before retrying."
       If LenB(errText) = 0 Then errText = "Batch create request failed."
       Err.Clear
       Set batchOut = Nothing
@@ -416,7 +423,11 @@ Private Sub RunCreateBatches( _
           If one.Exists("id") Then results(rowIndex + 1, 1) = one("id")
         Else
           results(rowIndex + 1, 2) = "Failure"
-          results(rowIndex + 1, 3) = ExtractBatchError(one, httpStatus)
+          If httpStatus = 408 Or httpStatus = 504 Then
+            results(rowIndex + 1, 3) = "Create timed out. Outcome unknown. Check for an existing item before retrying."
+          Else
+            results(rowIndex + 1, 3) = ExtractBatchError(one, httpStatus)
+          End If
         End If
       Next
     End If

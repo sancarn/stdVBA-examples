@@ -13,6 +13,8 @@ Attribute VB_Exposed = False
 'It supports schema-aware field transforms (person/multiperson/multichoice/lookup/date),
 'single-item and paged reads, in-place search, item create/update, batch operations, and
 'commit-payload orchestration with optional payload simplification.
+'@aidate 2026-11-26
+'@aidesc AI added batch response parsing and timed-out update verification.
 '@example ```vb
 'Dim auth As SharepointAuthenticator
 'Set auth = SharepointAuthenticator.Create("https://contoso.sharepoint.com")
@@ -697,11 +699,13 @@ End Function
 '@param BatchChanges as stdJSON<Array<{id: long, data: stdJSON}>> - Update operations.
 '@param ChangeSetId - Optional changeset guid.
 '@param BatchUuid - Optional batch guid.
-'@returns as stdJSON<Array> - Per-item result objects.
+'@param VerifyTimeouts - Read back requested fields by ID after a batch or item timeout.
+'@returns as stdJSON<Array> - Per-item results. A verified timeout also carries verified=True.
 Public Function BatchItemsSet( _
   ByVal BatchChanges As stdJSON, _
   Optional ByVal ChangeSetId As String = vbNullString, _
-  Optional ByVal BatchUuid As String = vbNullString _
+  Optional ByVal BatchUuid As String = vbNullString, _
+  Optional ByVal VerifyTimeouts As Boolean = False _
 ) As stdJSON
   Dim chunked As Collection
   Dim chunk As stdJSON
@@ -740,10 +744,12 @@ Public Function BatchItemsSet( _
     lineItems.Add "Content-Type: multipart/mixed; boundary=changeset_" & ChangeSetId
     lineItems.Add vbNullString
 
+    Dim wirePayloads As Collection: Set wirePayloads = New Collection
     For j = 1 To chunk.Length
       Set Item = chunk(j)
       Set op = TransformSetterData(JsonGetObject(Item, "data"))
       SetMetadataType op, itemType
+      If VerifyTimeouts Then wirePayloads.Add op
 
       lineItems.Add "--changeset_" & ChangeSetId
       lineItems.Add "Content-Type: application/http"
@@ -764,19 +770,36 @@ Public Function BatchItemsSet( _
 
     headers = BuildDefaultHeaders(True, "multipart/mixed; boundary=""batch_" & BatchUuid & """")
     stdHTTP.SetHeader headers, "X-RequestDigest", digest
-    Set req = SendRequest(This.SiteURL & "/_api/$batch", "POST", JoinCollection(lineItems, vbCrLf), headers, "multipart/mixed")
+    Dim timedOut As Boolean
+    Set req = PostChangeset(JoinCollection(lineItems, vbCrLf), headers, VerifyTimeouts, timedOut)
+    If Not timedOut Then
+      Set parseRows = ParseODataBatchResponse(CStr(req.ResponseText))
+      'Some servers omit the workaround response. Both shapes cover all original PATCHes.
+      If parseRows.count <> chunk.Length And parseRows.count <> chunk.Length - 1 Then
+        Err.Raise 5, "stdSharepointList::BatchItemsSet", "Unexpected PATCH response count. Check item state before retrying."
+      End If
+    End If
 
-    Set parseRows = ParseODataBatchResponse(CStr(req.ResponseText))
-    For j = 1 To parseRows.count - 1
-      Set one = parseRows(j)
+    Dim pending As Collection: Set pending = New Collection
+    For j = 1 To chunk.Length - 1
       Set out = stdJSON.Create(eJSONObject)
       out.Add "type", "update"
       out.Add "id", CLng(chunk(j)("id"))
-      out.Add "httpStatus", one("statusCode")
-      If IsObject(one("json")) Then out.Add "data", one("json")
+      Dim status As Long: status = 0
+      If Not timedOut Then
+        Set one = parseRows(j)
+        status = one("statusCode")
+        If IsObject(one("json")) Then out.Add "data", one("json")
+      End If
+      out.Add "httpStatus", status
       out.Add "payload", chunk(j)
+      If VerifyTimeouts And (timedOut Or status = 408 Or status = 504) Then
+        out.Add "timeoutReason", "Update timed out. Requested values could not be confirmed."
+        pending.Add Array(out, wirePayloads(j))
+      End If
       results.Add out
     Next
+    VerifyPendingUpdates pending
   Next
 
   Set BatchItemsSet = results
@@ -843,10 +866,13 @@ Public Function BatchItemsCreate(ByVal BatchItems As stdJSON, Optional ByVal Bat
 
     headers = BuildDefaultHeaders(True, "multipart/mixed; boundary=""batch_" & BatchUuid & """")
     stdHTTP.SetHeader headers, "X-RequestDigest", digest
-    Set req = SendRequest(This.SiteURL & "/_api/$batch", "POST", JoinCollection(lineItems, vbCrLf), headers, "multipart/mixed")
-
+    Dim timedOut As Boolean
+    Set req = PostChangeset(JoinCollection(lineItems, vbCrLf), headers, False, timedOut)
     Set parseRows = ParseODataBatchResponse(CStr(req.ResponseText))
-    For j = 1 To parseRows.count - 1
+    If parseRows.count <> chunk.Length Then
+      Err.Raise 5, "stdSharepointList::BatchItemsCreate", "Unexpected create response count. Check for existing items before retrying."
+    End If
+    For j = 1 To parseRows.count
       Set one = parseRows(j)
       Set out = stdJSON.Create(eJSONObject)
       out.Add "type", "create"
@@ -1377,7 +1403,12 @@ Private Function TransformSetterData(ByVal data As stdJSON) As stdJSON
     Set node = info(i)
     key = CStr(node("key"))
     lowerKey = LCase$(key)
-    val = node("value")
+    If IsObject(node("value")) Then
+      Set val = node("value")
+    Else
+      Set val = Nothing
+      val = node("value")
+    End If
 
     'Preferred expanded-field alias syntax: Owner/Email
     slashPos = InStr(1, key, "/", vbTextCompare)
@@ -1528,50 +1559,187 @@ Private Sub SetMetadataType(ByVal data As stdJSON, ByVal itemType As String)
   JsonAddOrSet data, "__metadata", m
 End Sub
 
- 'Parse multipart OData batch response into status/json result rows.
-Private Function ParseODataBatchResponse(ByVal body As String) As Collection
-  Dim parts() As String
-  Dim boundary As String
-  Dim i As Long
-  Dim part As String
-  Dim matches As Object
-  Dim re As Object
-  Dim row As Object
-  Dim statusCode As Long
-  Dim StatusText As String
-
-  Set ParseODataBatchResponse = New Collection
-  boundary = ExtractBatchBoundary(body)
-  If LenB(boundary) = 0 Then Err.Raise 5, "stdSharepointList::ParseODataBatchResponse", "No batch boundary found."
-
-  parts = Split(body, boundary)
-  Set re = CreateObject("VBScript.RegExp")
-  re.pattern = "HTTP/\d\.\d\s+(\d+)\s+([^\r\n]+)"
-  re.Global = False
-  re.IgnoreCase = True
-
-  For i = LBound(parts) To UBound(parts)
-    part = Trim$(parts(i))
-    If LenB(part) = 0 Then GoTo ContinuePart
-    If part = "--" Then GoTo ContinuePart
-
-    If re.Test(part) Then
-      Set matches = re.Execute(part)
-      statusCode = CLng(matches(0).SubMatches(0))
-      StatusText = CStr(matches(0).SubMatches(1))
-    Else
-      statusCode = 0
-      StatusText = vbNullString
-    End If
-
-    Set row = NewDictionary(vbTextCompare)
-    row("statusCode") = statusCode
-    row("statusText") = StatusText
-    Set row("json") = TryExtractJsonObject(part)
-    ParseODataBatchResponse.Add row
-ContinuePart:
-  Next
+ 'Capture only timeouts from the write request, after payload preparation is complete.
+Private Function PostChangeset(ByVal body As String, ByRef headers As Variant, ByVal captureTimeout As Boolean, ByRef timedOut As Boolean) As stdHTTP
+  timedOut = False
+  On Error GoTo failed
+  Set PostChangeset = SendRequest(This.SiteURL & "/_api/$batch", "POST", body, headers, "multipart/mixed")
+  Exit Function
+failed:
+  Dim number As Long: number = Err.Number
+  Dim source As String: source = Err.source
+  Dim detail As String: detail = Err.Description
+  If (number = 10000 And source = "stdHTTP") Or number = &H80072EE2 Or _
+      (source = "stdSharepointList::SendRequest" And (detail Like "HTTP 408 *" Or detail Like "HTTP 504 *")) Then
+    timedOut = True
+    If captureTimeout Then Exit Function
+    source = "stdSharepointList::BatchWriteTimeout"
+  End If
+  Err.Raise number, source, detail
 End Function
+
+'Read a bounded group of IDs at a time. Each entry pairs the result with its original wire payload.
+Private Sub VerifyPendingUpdates(ByVal pending As Collection)
+  Const groupSize As Long = 25
+  Dim first As Long, last As Long
+  For first = 1 To pending.count Step groupSize
+    last = first + groupSize - 1
+    If last > pending.count Then last = pending.count
+    VerifyUpdateGroup pending, first, last
+  Next
+End Sub
+
+Private Sub VerifyUpdateGroup(ByVal pending As Collection, ByVal first As Long, ByVal last As Long)
+  Dim byId As Object: Set byId = NewDictionary()
+  Dim fields As Object: Set fields = NewDictionary()
+  Dim filters As Collection: Set filters = New Collection
+  Dim idx As Long, pair As Variant, child As Object, field As String, id As String
+  Dim expected As stdJSON, result As stdJSON, actual As stdJSON
+  On Error GoTo readFailed
+  fields.Add "Id", True
+  For idx = first To last
+    pair = pending(idx)
+    Set result = pair(0)
+    id = CStr(result("id"))
+    filters.Add "Id eq " & id
+    byId.Add id, idx
+    Set expected = pair(1)
+    For Each child In expected.ChildrenInfo
+      field = child("key")
+      If field <> "__metadata" Then fields(field) = True
+    Next
+  Next
+
+  Dim url As String
+  url = ListItemsEndpoint("?$select=" & stdHTTP.URIEncode(Join(fields.Keys, ",")) & _
+    "&$filter=" & stdHTTP.URIEncode(JoinCollection(filters, " or ")) & "&$top=" & CStr(last - first + 1))
+  Do While LenB(url) > 0
+    Dim page As stdJSON: Set page = RequestJson(url, "GET")
+    Dim d As stdJSON: Set d = page("d")
+    Dim rows As stdJSON: Set rows = d("results")
+    Dim rowIndex As Long
+    For rowIndex = 1 To rows.Length
+      Set actual = rows(rowIndex)
+      id = CStr(actual("Id"))
+      If byId.Exists(id) Then
+        pair = pending(byId(id))
+        Set result = pair(0)
+        Set expected = pair(1)
+        If WrittenFieldsMatch(expected, actual) Then result.Add "verified", True
+      End If
+    Next
+    url = JsonGetString(d, "__next")
+  Loop
+  Exit Sub
+readFailed:
+  Dim detail As String: detail = Err.Description
+  For idx = first To last
+    pair = pending(idx)
+    Set result = pair(0)
+    If Not result.Exists("verified") Then result("timeoutReason") = "Update timed out. Read-back failed: " & detail
+  Next
+End Sub
+
+'Compare only submitted fields, using their wire names (including Person/Lookup Id).
+Private Function WrittenFieldsMatch(ByVal expected As stdJSON, ByVal actual As stdJSON) As Boolean
+  On Error GoTo unconfirmed
+  Dim field As String, child As Object, compared As Boolean
+  For Each child In expected.ChildrenInfo
+    field = child("key")
+    If field <> "__metadata" Then
+      If Not actual.Exists(field) Then Exit Function
+      If Not WrittenValueMatches(CStr(field), expected(field), actual(field)) Then Exit Function
+      compared = True
+    End If
+  Next
+  WrittenFieldsMatch = compared
+unconfirmed:
+End Function
+
+Private Function WrittenValueMatches(ByVal field As String, ByVal wanted As Variant, ByVal found As Variant) As Boolean
+  If IsNull(wanted) Or IsNull(found) Then
+    WrittenValueMatches = IsNull(wanted) And IsNull(found)
+  ElseIf IsObject(wanted) Or IsObject(found) Then
+    If Not (IsObject(wanted) And IsObject(found)) Then Exit Function
+    If Not (wanted.Exists("results") And found.Exists("results")) Then Exit Function
+    Dim a As stdJSON: Set a = wanted("results")
+    Dim b As stdJSON: Set b = found("results")
+    If a.JsonType <> eJSONArray Or b.JsonType <> eJSONArray Or a.Length <> b.Length Then Exit Function
+    Dim values As Object: Set values = NewDictionary()
+    Dim i As Long, key As String
+    For i = 1 To a.Length
+      key = CollectionValueKey(a(i))
+      values(key) = CLng(values(key)) + 1
+    Next
+    For i = 1 To b.Length
+      key = CollectionValueKey(b(i))
+      If Not values.Exists(key) Then Exit Function
+      If values(key) = 1 Then values.Remove key Else values(key) = values(key) - 1
+    Next
+    WrittenValueMatches = values.count = 0
+  ElseIf ResolveFieldTypeByName(field) = SharePointFieldDate Then
+    Dim stamp As String: stamp = Replace(CStr(wanted), " ", "T")
+    WrittenValueMatches = (CStr(found) = stamp & "Z" Or CStr(found) = stamp Or _
+      CStr(found) = stamp & ".000Z")
+  ElseIf VarType(wanted) = vbString Or VarType(found) = vbString Then
+    If VarType(wanted) = VarType(found) Then WrittenValueMatches = StrComp(wanted, found, vbBinaryCompare) = 0
+  ElseIf VarType(wanted) = vbBoolean Or VarType(found) = vbBoolean Then
+    If VarType(wanted) = VarType(found) Then WrittenValueMatches = (wanted = found)
+  ElseIf IsNumeric(wanted) And IsNumeric(found) Then
+    WrittenValueMatches = (CDbl(wanted) = CDbl(found))
+  End If
+End Function
+
+Private Function CollectionValueKey(ByVal value As Variant) As String
+  If IsNumeric(value) And VarType(value) <> vbString Then
+    CollectionValueKey = "number:" & CStr(value)
+  Else
+    CollectionValueKey = TypeName(value) & ":" & CStr(value)
+  End If
+End Function
+
+'Parse multipart OData batch response into status/json result rows.
+Private Function ParseODataBatchResponse(ByVal body As String) As Collection
+  Set ParseODataBatchResponse = New Collection
+  Dim boundary As String: boundary = ExtractBatchBoundary(body)
+  If LenB(boundary) = 0 Then Err.Raise 5, "ParseODataBatchResponse", "No batch boundary found."
+  ParseResponseParts Replace(body, vbCrLf, vbLf), boundary, ParseODataBatchResponse
+End Function
+
+'Only application/http MIME parts represent operations. Ignore the closing delimiter and epilogue.
+Private Sub ParseResponseParts(ByVal body As String, ByVal boundary As String, ByVal rows As Collection)
+  Dim parts() As String: parts = Split(vbLf & body, vbLf & boundary)
+  Dim i As Long, part As String, pos As Long, headers As String, content As String
+  Dim statusLine As String, tokens() As String, row As Object
+  For i = 1 To UBound(parts)
+    part = parts(i)
+    If Left$(part, 2) = "--" Then Exit Sub
+    If Left$(part, 1) <> vbLf Then GoTo malformed
+    part = Mid$(part, 2)
+    pos = InStr(part, vbLf & vbLf)
+    If pos = 0 Then GoTo malformed
+    headers = Left$(part, pos - 1)
+    content = Mid$(part, pos + 2)
+    pos = InStr(content & vbLf, vbLf)
+    statusLine = Left$(content, pos - 1)
+    If InStr(1, headers, "multipart/mixed", vbTextCompare) > 0 Then
+      If Left$(statusLine, 2) <> "--" Or Len(statusLine) <= 2 Then GoTo malformed
+      ParseResponseParts content, statusLine, rows
+    Else
+      If InStr(1, headers, "application/http", vbTextCompare) = 0 Then GoTo malformed
+      tokens = Split(statusLine, " ", 3)
+      If UBound(tokens) < 1 Then GoTo malformed
+      If Left$(tokens(0), 5) <> "HTTP/" Or Not tokens(1) Like "###" Then GoTo malformed
+      Set row = NewDictionary(vbTextCompare)
+      row("statusCode") = CLng(tokens(1))
+      row("statusText") = Mid$(statusLine, Len(tokens(0)) + Len(tokens(1)) + 2)
+      Set row("json") = TryExtractJsonObject(content)
+      rows.Add row
+    End If
+  Next
+malformed:
+  Err.Raise 5, "ParseODataBatchResponse", "Incomplete or malformed batch response. Check item state before retrying."
+End Sub
 
  'Try to parse the first JSON object found in a batch response part.
 Private Function TryExtractJsonObject(ByVal bodyPart As String) As stdJSON
@@ -1710,8 +1878,8 @@ Private Function BuildStringResultsObject(ByVal value As Variant) As stdJSON
     For i = LBound(value) To UBound(value)
       results.Add CStr(value(i))
     Next
-  ElseIf LenB(CStr(value)) > 0 Then
-    results.Add CStr(value)
+  ElseIf Not IsNull(value) Then
+    If LenB(CStr(value)) > 0 Then results.Add CStr(value)
   End If
 
   out.Add "results", results
@@ -1743,8 +1911,8 @@ Private Function BuildIdResultsObject(ByVal value As Variant) As stdJSON
     For i = LBound(value) To UBound(value)
       results.Add ResolvePrincipalToUserId(value(i))
     Next
-  ElseIf Not IsNull(value) And LenB(CStr(value)) > 0 Then
-    results.Add ResolvePrincipalToUserId(value)
+  ElseIf Not IsNull(value) Then
+    If LenB(CStr(value)) > 0 Then results.Add ResolvePrincipalToUserId(value)
   End If
 
   out.Add "results", results
