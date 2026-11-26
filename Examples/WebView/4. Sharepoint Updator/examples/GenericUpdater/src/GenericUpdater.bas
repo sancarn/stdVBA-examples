@@ -2,7 +2,7 @@ Attribute VB_Name = "GenericUpdater"
 
 '@module
 '@aidate 2026-11-26
-'@aidesc AI added timeout result handling.
+'@aidesc AI added timeout handling and row-level person resolution.
 '@description Range-based generic SharePoint list updater / creator.
 'Call order:
 '  1. stdSharepointAuthenticator.Create(SiteURL)
@@ -135,13 +135,13 @@ Public Function UpdateList( _
   '6. Validate individual rows; build create/update payloads for valid rows
   Dim updatePayloads As stdJSON: Set updatePayloads = stdJSON.Create(eJSONArray)
   Dim createPayloads As stdJSON: Set createPayloads = stdJSON.Create(eJSONArray)
-  Dim seenIds As Object: Set seenIds = CreateObject("Scripting.Dictionary")
-  seenIds.compareMode = vbTextCompare
   Dim validRowIndexes As Collection: Set validRowIndexes = New Collection
   Dim updateRowById As Object: Set updateRowById = CreateObject("Scripting.Dictionary")
   updateRowById.compareMode = vbTextCompare
   Dim createRowIndexes As Collection: Set createRowIndexes = New Collection
 
+  Dim rejectedUsers As Object: Set rejectedUsers = CreateObject("Scripting.Dictionary")
+  rejectedUsers.compareMode = vbTextCompare
   Dim rowIndex As Long
   For rowIndex = 1 To dataRows
     Dim rowIssues As Collection: Set rowIssues = New Collection
@@ -157,17 +157,20 @@ Public Function UpdateList( _
         rowOp, _
         columns, _
         colCount, _
-        seenIds, _
+        updateRowById, _
         itemId, _
         rowIssues _
       )
+    End If
+
+    If rowIssues.count = 0 Then
+      Dim dataObj As stdJSON: Set dataObj = BuildRowPayload(patchValues, rowIndex + 1, columns, colCount, list, rejectedUsers, rowIssues)
     End If
 
     If rowIssues.count > 0 Then
       results(rowIndex + 1, 2) = "Failure"
       results(rowIndex + 1, 3) = JoinCollection(rowIssues, "; ")
     Else
-      Dim dataObj As stdJSON: Set dataObj = BuildRowPayload(patchValues, rowIndex + 1, columns, colCount)
       validRowIndexes.Add rowIndex
 
       If rowOp = RowOpCreate Then
@@ -179,7 +182,7 @@ Public Function UpdateList( _
         payload.Add "data", dataObj
         updatePayloads.Add payload
         Dim idKey As String: idKey = CStr(itemId)
-        If Not updateRowById.Exists(idKey) Then updateRowById.Add idKey, rowIndex
+        updateRowById.Add idKey, rowIndex
       End If
     End If
   Next
@@ -583,6 +586,8 @@ Private Function MapTypeAsString(ByVal typeName As String, ByVal row As stdJSON)
       MapTypeAsString = SharePointFieldChoice
     Case "multichoice"
       MapTypeAsString = SharePointFieldMultiChoice
+    Case "usermulti"
+      MapTypeAsString = SharePointFieldMultiPerson
     Case "user"
       If row.Exists("AllowMultipleValues") And CBool(row("AllowMultipleValues")) Then
         MapTypeAsString = SharePointFieldMultiPerson
@@ -746,7 +751,7 @@ Private Sub ValidateRow( _
   ByVal rowOp As ERowOp, _
   ByRef columns() As TColumnMap, _
   ByVal colCount As Long, _
-  ByVal seenIds As Object, _
+  ByVal updateRowById As Object, _
   ByRef itemId As Long, _
   ByVal issues As Collection _
 )
@@ -775,11 +780,10 @@ Private Sub ValidateRow( _
     End If
 
     Dim idKey As String: idKey = CStr(itemId)
-    If seenIds.Exists(idKey) Then
+    If updateRowById.Exists(idKey) Then
       issues.Add "Duplicate ID " & idKey
       Exit Sub
     End If
-    seenIds.Add idKey, True
   End If
 
   Dim i As Long
@@ -893,7 +897,8 @@ Private Function BuildRowPayload( _
   ByRef patchValues As Variant, _
   ByVal sheetRow As Long, _
   ByRef columns() As TColumnMap, _
-  ByVal colCount As Long _
+  ByVal colCount As Long, ByVal list As stdSharepointList, _
+  ByVal rejectedUsers As Object, ByVal issues As Collection _
 ) As stdJSON
   Dim data As stdJSON: Set data = stdJSON.Create(eJSONObject)
   Dim i As Long
@@ -908,12 +913,13 @@ Private Function BuildRowPayload( _
     Dim textVal As String: textVal = Trim$(CStr(raw))
     Select Case CLng(columns(i).FieldType)
       Case SharePointFieldMultiChoice, SharePointFieldMultiPerson
-        Dim convertedObj As Variant: Set convertedObj = ConvertCellValue(columns(i), raw, textVal)
+        Dim convertedObj As Variant: Set convertedObj = ConvertCellValue(columns(i), raw, textVal, list, rejectedUsers, issues)
         data.Add columns(i).InternalName, convertedObj
       Case Else
-        Dim converted As Variant: converted = ConvertCellValue(columns(i), raw, textVal)
+        Dim converted As Variant: converted = ConvertCellValue(columns(i), raw, textVal, list, rejectedUsers, issues)
         data.Add columns(i).InternalName, converted
     End Select
+    If issues.count > 0 Then Exit Function
 ContinueBuild:
   Next
   Set BuildRowPayload = data
@@ -922,7 +928,8 @@ End Function
 Private Function ConvertCellValue( _
   ByRef col As TColumnMap, _
   ByVal raw As Variant, _
-  ByVal textVal As String _
+  ByVal textVal As String, ByVal list As stdSharepointList, _
+  ByVal rejectedUsers As Object, ByVal issues As Collection _
 ) As Variant
   Select Case CLng(col.FieldType)
     Case SharePointFieldNumber, SharePointFieldLookup
@@ -942,8 +949,9 @@ Private Function ConvertCellValue( _
       For p = LBound(parts) To UBound(parts)
         Dim part As String: part = Trim$(parts(p))
         If LenB(part) > 0 Then
-          If CLng(col.FieldType) = SharePointFieldMultiPerson And IsNumeric(part) Then
-            arr.Add CLng(part)
+          If CLng(col.FieldType) = SharePointFieldMultiPerson Then
+            arr.Add ResolveUploadPerson(part, col.header, list, rejectedUsers, issues)
+            If issues.count > 0 Then Exit For
           Else
             arr.Add part
           End If
@@ -951,14 +959,28 @@ Private Function ConvertCellValue( _
       Next
       Set ConvertCellValue = arr
     Case SharePointFieldPerson
-      If IsNumeric(textVal) Then
-        ConvertCellValue = CLng(textVal)
-      Else
-        ConvertCellValue = textVal
-      End If
+      ConvertCellValue = ResolveUploadPerson(textVal, col.header, list, rejectedUsers, issues)
     Case Else
       ConvertCellValue = textVal
   End Select
+End Function
+
+ 'Resolve an email before its row enters a batch. Reuse definitive rejections for this run.
+Private Function ResolveUploadPerson(ByVal person As String, ByVal header As String, ByVal list As stdSharepointList, _
+    ByVal rejectedUsers As Object, ByVal issues As Collection) As Long
+  If IsNumeric(person) Then
+    ResolveUploadPerson = CLng(person)
+  ElseIf rejectedUsers.Exists(person) Then
+    issues.Add header & " (" & person & "): " & rejectedUsers(person)
+  Else
+    On Error GoTo lookupFailed
+    ResolveUploadPerson = list.GetOrCreateUserId(person)
+  End If
+  Exit Function
+lookupFailed:
+  Dim detail As String: detail = Err.Description
+  If Err.Source = "stdSharepointList::SendRequest" And detail Like "HTTP 400 *" Then rejectedUsers.Add person, detail
+  issues.Add header & " (" & person & "): " & detail
 End Function
 
 '---------------------------------------

@@ -50,7 +50,7 @@ Safety notes:
 ### Update
 
 - Requires a numeric positive `ID`.
-- Duplicate IDs in the same run: first row may update; later duplicates fail validation.
+- Duplicate IDs in the same run: the first valid row for an ID is queued. Later rows with that ID fail validation.
 - Only non-blank, non-`null` cells are PATCHed; blank cells leave existing values alone.
 
 ### Create
@@ -108,7 +108,7 @@ Not accepted by GenericUpdater validation:
 - Display name only (no `@`)
 - Arbitrary login strings without `@` (unless numeric)
 
-The email must be resolvable in that tenant/site. Unknown emails fail at resolve/`ensureuser` time (row or batch error).
+The email must be resolvable in that tenant/site. An unresolved email fails its input row, including when it appears in a multi-person field. The result includes the column, email and SharePoint error. Other valid rows are submitted.
 
 Create and Update use the same person resolution path.
 

@@ -6,3 +6,4 @@
 - 2026-11-26 `Repository` DEV - Adopt the stdVBA agent guidance, including reuse of one hidden Excel instance per test run and focus recovery after VBA error dialogs.
 
 - 2026-11-26 `GenericUpdater` FEATURE - Recover item IDs after create timeouts using an optional `__create_recovery_key__` text field.
+- 2026-11-26 `GenericUpdater` FIX - Exclude rows with unresolved person or multi-person fields and submit the remaining creates and updates. A rejected row leaves its ID available for a later valid update.
