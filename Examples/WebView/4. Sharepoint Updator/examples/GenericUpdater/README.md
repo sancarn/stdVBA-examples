@@ -108,7 +108,7 @@ Not accepted by GenericUpdater validation:
 - Display name only (no `@`)
 - Arbitrary login strings without `@` (unless numeric)
 
-The email must be resolvable in that tenant/site. An unresolved email fails its input row, including when it appears in a multi-person field. The result includes the column, email and SharePoint error. Other valid rows are submitted.
+The email must be resolvable in that tenant/site. The uploader resolves distinct addresses in batches of up to 50. Numeric user IDs bypass the lookup. An unresolved email fails its input row, including when it appears in a multi-person field. The result includes the column, email and SharePoint error. Other valid rows are submitted.
 
 Create and Update use the same person resolution path.
 
@@ -170,9 +170,9 @@ During each create, Excel sends a new GUID in the field and keeps its associatio
 
 ## Test batched person resolution
 
-Open a signed-in page on the target SharePoint site. In its browser developer console, run the contents of [tests/ensureuser-batch.js](tests/ensureuser-batch.js). Enter the site URL and two distinct, valid test accounts. Use accounts new to the site if you want to exercise first-time resolution. Like ordinary `ensureuser`, this can register those accounts with the site. The test does not change list items.
+Open a signed-in page on the target SharePoint site. In its browser developer console, run the contents of [tests/ensureuser-batch.js](tests/ensureuser-batch.js). Enter the site URL and two distinct test addresses, including at least one valid account. Use accounts new to the site if you want to exercise first-time resolution. Like ordinary `ensureuser`, this can register those accounts with the site. The test does not change list items.
 
-The script sends the two `ensureuser` POSTs together, prints the raw multipart response, then makes two individual calls for comparison. A pass requires two successful item responses with distinct IDs matching the individual controls. An outer HTTP 200 alone is insufficient. The uploader continues to resolve people individually.
+The script sends the two `ensureuser` POSTs together, prints the raw multipart response, then makes two individual calls for comparison. A pass requires both HTTP statuses to match the controls, at least one successful lookup, and matching IDs for every success. An outer HTTP 200 alone is insufficient.
 
 ## `EnsureTableFields` / `mainFetchFields`
 

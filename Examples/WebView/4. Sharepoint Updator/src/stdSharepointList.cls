@@ -14,7 +14,7 @@ Attribute VB_Exposed = False
 'single-item and paged reads, in-place search, item create/update, batch operations, and
 'commit-payload orchestration with optional payload simplification.
 '@aidate 2026-11-26
-'@aidesc AI added batch response parsing and timed-out update verification.
+'@aidesc AI added batch response parsing including person lookups, and timed-out update verification.
 '@example ```vb
 'Dim auth As SharepointAuthenticator
 'Set auth = SharepointAuthenticator.Create("https://contoso.sharepoint.com")
@@ -617,6 +617,78 @@ Public Function GetOrCreateUserId(ByVal UserText As String) As Long
 
   This.UserIdCache.Add key, CLng(d("Id"))
   GetOrCreateUserId = CLng(d("Id"))
+End Function
+
+ 'Resolve the uploader's distinct logins into site user IDs or per-login error messages.
+Friend Sub BatchEnsureUsers(ByVal logins As Collection, ByVal people As Object)
+  Const groupSize As Long = 50
+  Dim first As Long, last As Long
+  For first = 1 To logins.count Step groupSize
+    last = first + groupSize - 1
+    If last > logins.count Then last = logins.count
+    EnsureUserGroup logins, first, last, people
+  Next
+End Sub
+
+Private Sub EnsureUserGroup(ByVal logins As Collection, ByVal first As Long, ByVal last As Long, ByVal people As Object)
+  On Error GoTo groupFailed
+  Dim batch As String: batch = "batch_" & GenerateUuid()
+  Dim lines As Collection: Set lines = New Collection
+  Dim i As Long, change As String
+  For i = first To last
+    'One changeset per login keeps outer response order unambiguous, including aliases and failures.
+    change = "changeset_" & Mid$(batch, 7) & "_" & CStr(i)
+    lines.Add "--" & batch
+    lines.Add "Content-Type: multipart/mixed; boundary=" & change
+    lines.Add vbNullString
+    lines.Add "--" & change
+    lines.Add "Content-Type: application/http"
+    lines.Add "Content-Transfer-Encoding: binary"
+    lines.Add vbNullString
+    lines.Add "POST " & This.SiteURL & "/_api/web/ensureuser HTTP/1.1"
+    lines.Add "Content-Type: " & SP_JSON_VERBOSE
+    lines.Add "Accept: " & SP_JSON_VERBOSE
+    lines.Add vbNullString
+    Dim body As stdJSON: Set body = stdJSON.Create(eJSONObject)
+    body.Add "logonName", logins(i)
+    lines.Add body.ToString()
+    lines.Add vbNullString
+    lines.Add "--" & change & "--"
+  Next
+  lines.Add "--" & batch & "--"
+  lines.Add vbNullString
+  Dim headers As Variant: headers = BuildDefaultHeaders(True, "multipart/mixed; boundary=" & batch)
+  stdHTTP.SetHeader headers, "X-RequestDigest", GetFormDigest()
+  Dim req As stdHTTP: Set req = SendRequest(This.SiteURL & "/_api/$batch", "POST", JoinCollection(lines, vbCrLf), headers, "multipart/mixed")
+  Dim parts As Collection: Set parts = ParseODataBatchResponse(CStr(req.ResponseText))
+  If parts.count <> last - first + 1 Then Err.Raise 5, "BatchEnsureUsers", "Unexpected ensureuser response count."
+  For i = first To last
+    people(logins(i)) = EnsureUserResult(parts(i - first + 1))
+  Next
+  Exit Sub
+groupFailed:
+  Dim detail As String: detail = "User lookup batch failed: " & Err.Description
+  For i = first To last
+    people(logins(i)) = detail
+  Next
+End Sub
+
+Private Function EnsureUserResult(ByVal part As Object) As Variant
+  On Error GoTo invalidResult
+  Dim status As Long: status = part("statusCode")
+  Dim json As stdJSON: Set json = part("json")
+  If status >= 200 And status < 300 Then
+    Dim id As Long: id = VariantToLong(JsonGetObject(json, "d"), "Id")
+    If id <= 0 Then GoTo invalidResult
+    EnsureUserResult = id
+  Else
+    Dim detail As String
+    detail = JsonGetString(JsonGetObject(JsonGetObject(json, "error"), "message"), "value")
+    EnsureUserResult = Trim$("HTTP " & status & " " & part("statusText") & " " & detail)
+  End If
+  Exit Function
+invalidResult:
+  EnsureUserResult = "Invalid ensureuser response (HTTP " & status & ")."
 End Function
 
 'Search SharePoint users by display/login/email text using People Picker.
